@@ -1,42 +1,371 @@
+/* ============================================================
+   理理理 · Design Tokens —— sandplay-handoff-v1 spec.html §2
+   （视觉唯一事实来源；交互决策以 理理理.md v3 为准）
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* colour */
+  --paper: #faf8f3; /* 屏背景 */
+  --sunken: #f6f3ea; /* archive / transcript 面板 */
+  --raised: #ffffff; /* mounts、气泡、卡片、输入栏 */
+  --accent: #5c6b4a; /* 主按钮、+ badge、用户气泡、进度 */
+  --ink: #1f1c17; /* 标题、正文 */
+  --ink-2: #43403a; /* 转写正文 */
+  --muted: #8a8375; /* 标签、链接、active dot */
+  --faint: #a9a292; /* meta italic、speaker 名 */
+  --placeholder: #b4ac9a; /* 输入占位 */
+  --readable: #7a7364; /* §8 a11y：需阅读的弱色统一加深到 ≈4.6:1 */
+  --line: #e6e1d4; /* mount 边、进度轨 */
+  --line-strong: #d6cfbe; /* 可编辑字段下划线 */
+  --slot-fill: #f2efe4; /* 空 mount 内芯 */
+  --slot-border: #cfc7b2; /* 空 mount 虚线边 1.5px */
+  --sand: #f1e9d6; /* sandplay 沙盘底 */
+  --sand-2: #ede2c8; /* 沙盘丘 */
+  --foliage: #c6d5bb; /* 沙盘灌木 */
+  --avatar-field: #e9eee0; /* 勋章内芯 */
+  --badge: #b6ae9b; /* 计数 pill */
+  --chevron: #5c5648;
+  --inflight: #c3bcaa; /* 转写 in-flight 尾句 */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  /* geometry（§2 Geometry） */
+  --screen-x: 24px;
+  --screen-top: 54px;
+  --screen-bottom: 34px;
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  /* elevation —— shadow colour rgba(60,54,40,α) */
+  --shadow-print-mid: 0 6px 16px rgba(60, 54, 40, 0.09);
+  --shadow-print-focus: 0 18px 38px rgba(60, 54, 40, 0.19);
+  --shadow-print-review: 0 12px 28px rgba(60, 54, 40, 0.14);
+  --shadow-button: 0 6px 16px rgba(60, 54, 40, 0.18);
+  --shadow-input: 0 3px 10px rgba(60, 54, 40, 0.06);
+  --shadow-card: 0 4px 12px rgba(60, 54, 40, 0.07);
+  --shadow-tray: inset 0 2px 10px rgba(120, 102, 66, 0.14);
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* motion（§3.2 建议曲线） */
+  --ease-fan: cubic-bezier(0.32, 0.72, 0.32, 1);
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
   margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
-a {
+body {
+  font-family: var(--font-display), Georgia, "Songti SC", serif;
+  color: var(--ink);
+  background: var(--paper);
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
   color: inherit;
-  text-decoration: none;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+input,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* ============================================================
+   App shell —— 390×844 逻辑基准；桌面下居中套灰底框（同 mockup 呈现）
+   ============================================================ */
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+@media (min-width: 480px) {
+  body {
+    display: grid;
+    place-items: center;
+    background: #e9e6de;
+  }
+  .app-shell {
+    width: 390px;
+    height: min(844px, 96dvh);
+    box-shadow: 0 24px 80px rgba(60, 54, 40, 0.22);
+  }
+}
+
+/* frame 容器与软进出场（无硬切） */
+.frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--screen-top) var(--screen-x) var(--screen-bottom);
+}
+.frame-enter {
+  animation: frameIn 360ms var(--ease-fan) both;
+}
+.frame-enter-left {
+  animation: frameInLeft 360ms var(--ease-fan) both;
+}
+@keyframes frameIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes frameInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   共享元素
+   ============================================================ */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  flex-shrink: 0;
+}
+.nav-title {
+  font-size: 17px;
+  font-weight: 500;
+}
+.nav-side {
+  min-width: 44px; /* §8：44px 触控区 */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.back-chevron {
+  color: var(--chevron);
+  margin-left: -12px; /*  glyph 视觉对齐 24px gutter，触控区仍 44px */
+  justify-content: flex-start;
+}
+
+.meta-italic {
+  font-style: italic;
+  font-size: 12.5px;
+  font-weight: 300;
+  color: var(--readable); /* §8：日期/说明等需阅读文本加深 */
+}
+
+.count-pill {
+  font-size: 12px;
+  color: #ffffff;
+  background: var(--badge);
+  border-radius: 9px;
+  padding: 1px 8px;
+}
+
+/* shimmer —— 加载永不黑屏（理理理.md §4） */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.55) 50%, transparent 80%);
+  background-size: 220% 100%;
+  animation: shimmerSweep 2.2s linear infinite;
+}
+@keyframes shimmerSweep {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+/* ============================================================
+   Motion —— handoff §6：全 ambient、全 CSS、全 infinite
+   ============================================================ */
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.anim-bob {
+  animation: bob 3.6s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.anim-sway {
+  animation: sway 4s ease-in-out infinite;
+}
+
+@keyframes listen {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+
+@keyframes talk {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes think {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.anim-blink {
+  animation: blink 1.1s step-end infinite;
+}
+
+/* 前置卡：缓慢浮动（选中态强调） */
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.anim-float {
+  animation: floatSoft 4.2s ease-in-out infinite;
+}
+
+@keyframes nod {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(4px);
+  }
+  70% {
+    transform: translateY(-2px);
+  }
+}
+.anim-nod {
+  animation: nod 800ms var(--ease-soft) 1;
+}
+
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 转写：落定 / in-flight（§4.2） */
+.word-final {
+  color: var(--ink);
+  transition: color 400ms ease;
+}
+.word-partial {
+  color: var(--inflight);
+}
+
+/* 滚动区隐藏滚动条 */
+.frame ::-webkit-scrollbar {
+  display: none;
+}
+.frame * {
+  scrollbar-width: none;
+}
+
+::selection {
+  background: rgba(92, 107, 74, 0.22);
+}
+input:focus,
+textarea:focus,
+button:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* §6：mockup 没做，build 里必须做 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
