@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { CharacterId, DialogueTurn, Story } from "@/lib/types";
+import type { CharacterId, DialogueTurn, Persona, Story } from "@/lib/types";
 import { getOpeningTurns, getResponseTurns } from "@/lib/api";
 import { QUIET_CLOSING, toTurn } from "@/lib/mock/dialogue";
 import { characterById } from "@/lib/mock/characters";
@@ -22,10 +22,12 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function F4Sandplay({
   story,
+  persona,
   onBack,
   onKeep,
 }: {
   story: Story;
+  persona?: Persona | null; // 用户带入的角色：发言以该角色身份出现在群聊里
   onBack: () => void;
   onKeep?: () => void; // 草稿故事：对话收敛后出现 Keep 入口
 }) {
@@ -174,7 +176,7 @@ export default function F4Sandplay({
       >
         {messages.map((m) =>
           m.speakerId === "user" ? (
-            <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
+            <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 8, animation: "bubbleIn 300ms var(--ease-soft) both" }}>
               <div
                 style={{
                   maxWidth: "76%",
@@ -184,8 +186,27 @@ export default function F4Sandplay({
                   backdropFilter: "blur(8px)",
                 }}
               >
+                {persona && (
+                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(250,248,243,0.75)", marginRight: 6 }}>{persona.name}</span>
+                )}
                 <span style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5, color: "var(--paper)" }}>{m.text}</span>
               </div>
+              {persona && (
+                <span
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: "#F0EBDD",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                    display: "block",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={persona.avatar} alt={persona.name} style={{ width: 30, height: 30, objectFit: "cover", objectPosition: "50% 12%" }} />
+                </span>
+              )}
             </div>
           ) : (
             <DanmakuBubble key={m.ts + m.text} speakerId={m.speakerId as FaceId} text={m.text} />
@@ -260,7 +281,7 @@ export default function F4Sandplay({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Say something back…"
+            placeholder={persona ? `Speak as ${persona.name}…` : "Say something back…"}
             style={{
               flex: 1,
               minWidth: 0,

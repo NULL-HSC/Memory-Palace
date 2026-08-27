@@ -1,6 +1,7 @@
-import type { CharacterId, Story } from "./types";
+import type { CharacterId, Persona, Story } from "./types";
 import { pickMockTitle } from "./mock/titles";
 import { nextResponseTurns, OPENING_TURNS } from "./mock/dialogue";
+import { MOCK_PERSONAS } from "./mock/personas";
 
 /**
  * 统一请求封装 —— 所有页面只准从这里发请求（hackathon-plan §4.3）
@@ -77,6 +78,17 @@ export async function getResponseTurns(): Promise<
     return nextResponseTurns();
   }
   return api("/sandplay/turn", { method: "POST" });
+}
+
+/* ---------------- 人设提取（契约: GET /api/sessions/{session_id}/personas，Top 3） ---------------- */
+
+export async function getPersonas(): Promise<Persona[]> {
+  if (USE_MOCK) {
+    await delay(800 + Math.random() * 400); // 模拟 LLM 人设提取
+    return MOCK_PERSONAS;
+  }
+  // TODO(联调): 前置 POST /api/sessions 拿 session_id，再 GET /sessions/{id}/personas（见 frontend-api.md）
+  throw new Error("personas 真接口待联调");
 }
 
 /* ---------------- 健康检查（契约: GET /health）—— 联调第一个测它 ---------------- */

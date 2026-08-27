@@ -21,6 +21,15 @@ export interface Character {
   color: string; // 角色主色（占位美术用）
 }
 
+/** 从用户故事里提取的人设 Top 3（契约: GET /api/sessions/{id}/personas）
+ *  进沙盘前用户选一个带入;avatar 为图片地址(mock 用本地 PNG,契约字段 avatar_url) */
+export interface Persona {
+  id: string;
+  name: string;
+  profile: string;
+  avatar: string;
+}
+
 export interface DialogueTurn {
   storyId: string;
   speakerId: CharacterId;

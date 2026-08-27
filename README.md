@@ -1,7 +1,7 @@
 # 理理理 · lilili
 
 治愈系「故事存档 + 角色陪伴」Demo —— 黑客松前端主链路。
-用说话的方式记录一天 → 直接进入 sandplay,房间里的角色们陪你把这一天聊透 → Keep 页确认标题/封面/可见性 → 存入长廊。
+用说话的方式记录一天 → 选出要带入的故事角色 → 进入 sandplay(直播间)以该角色视角聊透这一天 → Keep 页确认标题/封面/可见性 → 存入长廊。
 
 **权威来源**:视觉/像素 = `sandplay-handoff-v1`(spec.html + screens/*.html);交互/产品决策 = `理理理.md v3`;工程方案 = `hackathon-plan.md`。
 
@@ -18,8 +18,9 @@ npm run dev          # http://localhost:3000
 
 ```
 /?frame=listening    # F2 语音转写
+/?frame=pick         # 沙盘板块一:选带入角色
 /?frame=draft        # F3 标题封面(带 mock 转写)
-/?frame=sandplay     # F4 RPG 舞台对话
+/?frame=sandplay     # F4 直播间对话
 /?frame=spaces       # F5 他人房间
 ```
 
@@ -54,12 +55,13 @@ app/api/[...path]/route.ts  # 通用代理路由(转发时去掉 /api 前缀)
 app/globals.css             # handoff §2 design tokens + §6 全部动效
 lib/api.ts                  # 唯一请求入口 + USE_MOCK 开关
 lib/store.tsx               # stories + Lv 进度(localStorage 持久化)
-lib/mock/                   # 种子故事 / 伪转写文本 / 标题池 / 脚本对白
+lib/mock/                   # 种子故事 / 伪转写文本 / 标题池 / 脚本对白 / 人设 Top 3
 docs/backend-progress.md    # 后端联调进度实测记录(按时间戳往顶部追加)
+docs/product-flow.md        # 产品与交互定义(逐页确认的唯一口径)
 public/avatars/             # handoff 角色 PNG(占位美术,正式交付后整体替换)
 components/characters/      # Avatar 组件(img 封装,接口稳定)
 components/scene/           # F4 沙盘(AIGC video 槽位:shimmer 兜底 + speaker 焦点)
-components/frames/          # F1Home F2Listening F3Draft F4Sandplay F5Spaces
+components/frames/          # F1Home F2Listening PickRole F3Draft F4Sandplay F5Spaces
 components/ui/              # MountedPrint / NewStorySlot / Waveform / TypeText / TypingIndicator / Toast
 ```
 

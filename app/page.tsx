@@ -2,22 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import { StoreProvider, useStore } from "@/lib/store";
-import type { Story } from "@/lib/types";
+import type { Persona, Story } from "@/lib/types";
 import F1Home from "@/components/frames/F1Home";
 import F2Listening from "@/components/frames/F2Listening";
 import F3Draft from "@/components/frames/F3Draft";
 import F4Sandplay from "@/components/frames/F4Sandplay";
 import F5Spaces from "@/components/frames/F5Spaces";
+import PickRole from "@/components/frames/PickRole";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
- * 新故事：F1 Home → F2 Listening → F4 Sandplay（草稿先行）→ F3 Keep 页 → 入长廊回 Home；F1 ↔ F5
+ * 新故事：F1 Home → F2 Listening → Pick 选带入角色 → F4 Sandplay（草稿先行）→ F3 Keep 页 → 入长廊回 Home；F1 ↔ F5
  * T1: companion 从角落跳到画面中央
  */
 
-type Frame = "home" | "listening" | "draft" | "sandplay" | "spaces";
+type Frame = "home" | "listening" | "pick" | "draft" | "sandplay" | "spaces";
 type Overlay = "t1" | null;
 
 function Shell() {
@@ -28,6 +29,7 @@ function Shell() {
   const [transcript, setTranscript] = useState("");
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [pending, setPending] = useState<Story | null>(null); // 未 Keep 的草稿故事
+  const [persona, setPersona] = useState<Persona | null>(null); // 用户选择带入的角色
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
 
   /* 转场两段式：挂载后触发位移，结束后切帧（目前仅 T1 使用） */
@@ -45,7 +47,7 @@ function Shell() {
     };
   }, [overlay]);
 
-  /* 调试/演示捷径：?frame=listening|draft|sandplay|spaces 直达任意帧 */
+  /* 调试/演示捷径：?frame=listening|pick|draft|sandplay|spaces 直达任意帧 */
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("frame");
     if (!f) return;
@@ -55,11 +57,12 @@ function Shell() {
 
   /* T1 · Home → Listening：点 companion / "+" */
   const startNewStory = () => {
+    setPersona(null);
     setOverlay("t1");
     setOverlayGo(false);
   };
 
-  /* T2 收尾：F2 Done → 直接进沙盘对话（Keep 挪到沙盘结束之后） */
+  /* T2 收尾：F2 Done → 先选带入角色（板块一），再进沙盘直播间 */
   const handleListened = (text: string) => {
     setTranscript(text);
     setPending({
@@ -70,7 +73,7 @@ function Shell() {
       transcript: text,
       createdAt: Date.now(),
     });
-    setFrame("sandplay");
+    setFrame("pick");
   };
 
   /* 沙盘结束 → Keep 页确认（标题/封面/可见性）→ 入长廊回 Home */
@@ -84,12 +87,14 @@ function Shell() {
   }) => {
     addStory(draft);
     setPending(null);
+    setPersona(null);
     backHome();
   };
 
-  /** Keep 页放弃 → 丢弃草稿回 Home */
+  /** Keep 页/选角页放弃 → 丢弃草稿回 Home */
   const discardPending = () => {
     setPending(null);
+    setPersona(null);
     backHome();
   };
 
@@ -114,10 +119,12 @@ function Shell() {
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
+      {frame === "pick" && <PickRole onBack={discardPending} onPick={(p) => { setPersona(p); setFrame("sandplay"); }} />}
       {frame === "draft" && <F3Draft transcript={transcript} onBack={discardPending} onKeep={handleKeep} />}
       {frame === "sandplay" && (pending || activeStory) && (
         <F4Sandplay
           story={(pending ?? activeStory)!}
+          persona={pending ? persona : null}
           onBack={pending ? () => setFrame("draft") : backHome}
           onKeep={pending ? () => setFrame("draft") : undefined}
         />
