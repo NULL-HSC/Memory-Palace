@@ -128,7 +128,7 @@ export default function F3Draft({
                   padding: "12px 6px 10px",
                   borderRadius: 16,
                   border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(37,137,176,0.08)" : "#FFFFFF",
+                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "center",

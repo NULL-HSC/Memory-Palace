@@ -127,17 +127,37 @@ export default function F1Home({
   };
 
   return (
-    <div className={`frame ${enterClass}`} style={{ padding: "var(--screen-top) 0 0" }}>
-      {/* header（加大一号，层级提上来） */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "0 var(--screen-x)" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 9 }}>
-          <span style={{ fontSize: 23, fontWeight: 500 }}>My Stories</span>
+    <div className={`frame ${enterClass}`} style={{ padding: 0, overflow: "hidden" }}>
+      {/* ══ 顶部:雾蓝扇贝波浪布带 + 虚线车缝(示意图结构) ══ */}
+      <svg aria-hidden viewBox="0 0 390 106" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 106, pointerEvents: "none" }}>
+        <path d="M0 0 H390 V52 Q365.6 76 341.25 52 Q316.9 76 292.5 52 Q268.1 76 243.75 52 Q219.4 76 195 52 Q170.6 76 146.25 52 Q121.9 76 97.5 52 Q73.1 76 48.75 52 Q24.4 76 0 52 Z" fill="#D9EEF4" />
+        <path d="M390 44 Q365.6 68 341.25 44 Q316.9 68 292.5 44 Q268.1 68 243.75 44 Q219.4 68 195 44 Q170.6 68 146.25 44 Q121.9 68 97.5 44 Q73.1 68 48.75 44 Q24.4 68 0 44" fill="none" stroke="#2F9FC8" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+      </svg>
+
+      {/* header:布标签上的标题(示意图:My stories 挂在标签牌上) */}
+      <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--screen-top) var(--screen-x) 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span
+            style={{
+              display: "inline-block",
+              background: "#2F9FC8",
+              color: "#FFFFFF",
+              fontSize: 17,
+              fontWeight: 500,
+              padding: "5px 16px 6px",
+              borderRadius: 9,
+              transform: "rotate(-2deg)",
+              boxShadow: "0 3px 8px rgba(23,60,84,0.16)",
+            }}
+          >
+            My Stories
+          </span>
           <span className="count-pill" style={{ fontSize: 13, padding: "2px 10px" }}>
             {stories.length}
           </span>
         </div>
         <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }}>
-          <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--muted)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
+          <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
             Visit other spaces
           </span>
         </button>
@@ -162,25 +182,55 @@ export default function F1Home({
           }}
         />
         {stories.length === 0 ? (
+          /* 空态:格子布纹内芯的拍立得槽 + 奶油黄大圆 +(示意图手法) */
           <button
             onClick={onNewStory}
-            className="dashed"
             style={{
               position: "absolute",
               left: "50%",
               top: "38%",
-              transform: "translate(-50%, -50%)",
+              transform: "translate(-50%, -50%) rotate(-1.5deg)",
               width: 198,
               height: 255,
-              background: "var(--slot-fill)",
-              display: "grid",
-              placeItems: "center",
-              color: "var(--muted)",
-              fontStyle: "italic",
-              fontSize: 13.5,
+              background: "#FFFFFF",
+              border: "1px solid #D9EEF4",
+              borderRadius: 12,
+              padding: "10px 10px 34px",
+              boxShadow: "0 6px 16px rgba(23,60,84,0.10)",
             }}
           >
-            your first story
+            <span
+              style={{
+                display: "grid",
+                placeItems: "center",
+                width: "100%",
+                height: "100%",
+                borderRadius: 6,
+                border: "1.5px dashed var(--slot-border)",
+                background:
+                  "repeating-linear-gradient(0deg, rgba(142,212,232,0.22) 0 8px, transparent 8px 16px), repeating-linear-gradient(90deg, rgba(142,212,232,0.22) 0 8px, transparent 8px 16px), #EDF7FA",
+              }}
+            >
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 64,
+                  height: 64,
+                  borderRadius: "50%",
+                  background: "#FFD86A",
+                  boxShadow: "0 6px 14px rgba(23,60,84,0.18)",
+                }}
+              >
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2F9FC8" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </span>
+            </span>
+            <span style={{ position: "absolute", left: 0, right: 0, bottom: 9, textAlign: "center", fontSize: 12.5, fontStyle: "italic", color: "var(--muted)" }}>
+              your first story
+            </span>
           </button>
         ) : (
           stories.map((s, i) => {
@@ -205,7 +255,30 @@ export default function F1Home({
                   willChange: "transform",
                 }}
               >
-                {/* 前置卡：缓慢浮动 + 更深投影，选中态突出 */}
+                {/* 前置卡:挂绳小夹子(示意图手法)+ 缓慢浮动 + 更深投影 */}
+                {i === front && (
+                  <>
+                    {[72, 158].map((x) => (
+                      <span key={x} aria-hidden style={{ position: "absolute", left: x, top: -46, width: 0, zIndex: 2, pointerEvents: "none" }}>
+                        <span style={{ display: "block", width: 1.5, height: 34, margin: "0 auto", background: "linear-gradient(#A9D4E2, #7FA9BE)" }} />
+                        <span
+                          style={{
+                            display: "block",
+                            width: 13,
+                            height: 19,
+                            margin: "0 auto",
+                            borderRadius: 4,
+                            background: "#FFD86A",
+                            boxShadow: "0 2px 4px rgba(23,60,84,0.20)",
+                            position: "relative",
+                          }}
+                        >
+                          <span style={{ position: "absolute", left: 5.2, top: 2, bottom: 2, width: 1.6, background: "rgba(23,60,84,0.22)", borderRadius: 1 }} />
+                        </span>
+                      </span>
+                    ))}
+                  </>
+                )}
                 <div
                   className={i === front ? "anim-float" : undefined}
                   style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(23,60,84,0.20))" } : undefined}
@@ -258,50 +331,57 @@ export default function F1Home({
         )}
       </div>
 
-      {/* ══ 底 band：Create 入口（加大），Pico 站在右下角 ══ */}
-      <div style={{ position: "relative", padding: "0 var(--screen-x) 34px", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+      {/* ══ 底部:波浪地面(示意图)—— companion 脚踩地面,Create 是奶油黄大圆 + ══ */}
+      <svg aria-hidden viewBox="0 0 390 96" preserveAspectRatio="none" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 96, pointerEvents: "none" }}>
+        <path d="M0 96 V44 Q48 24 97 40 T195 38 T293 42 T390 34 V96 Z" fill="#D9EEF4" />
+        <path d="M0 53 Q48 33 97 49 T195 47 T293 51 T390 43" fill="none" stroke="#FFFFFF" strokeOpacity="0.85" strokeWidth="1.4" strokeDasharray="5 6" strokeLinecap="round" />
+      </svg>
+
+      {/* Create:奶油黄圆 + 号(示意图 CTA) */}
+      <div style={{ position: "absolute", left: "var(--screen-x)", bottom: 26, zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <button
           onClick={onNewStory}
+          aria-label="Create the sandplay"
           style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            gap: 10,
-            height: 56,
-            padding: "0 24px",
-            borderRadius: 28,
-            background: "var(--accent)",
-            boxShadow: "var(--shadow-button)",
+            justifyContent: "center",
+            width: 58,
+            height: 58,
+            borderRadius: "50%",
+            background: "#FFD86A",
+            boxShadow: "0 6px 16px rgba(23,60,84,0.20), inset 0 2px 0 rgba(255,255,255,0.5)",
+            transition: "transform 160ms var(--ease-soft)",
           }}
         >
-          <span style={{ fontSize: 17, fontWeight: 500, color: "var(--paper)" }}>Create the sandplay</span>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M5 12h13M12 5l7 7-7 7" />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2F9FC8" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+            <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
-
+        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--readable)" }}>new sandplay</span>
       </div>
 
-      {/* companion：站在屏幕最底、身体微微叠进 Gallery（后续换视频/动态人物也用这个悬浮位） */}
+      {/* companion:脚踩波浪地面,站在右下角 */}
       <button
         onClick={onNewStory}
         aria-label="Talk to Pico"
-        style={{ position: "absolute", right: 6, bottom: 6, lineHeight: 0, zIndex: 120 }}
+        style={{ position: "absolute", right: 8, bottom: 16, lineHeight: 0, zIndex: 120 }}
       >
         <span
           aria-hidden
           style={{
             position: "absolute",
             left: "50%",
-            bottom: -2,
+            bottom: 0,
             transform: "translateX(-50%)",
-            width: 120,
-            height: 22,
+            width: 116,
+            height: 20,
             borderRadius: "50%",
-            background: "rgba(23,60,84,0.10)",
+            background: "rgba(23,60,84,0.12)",
             filter: "blur(4px)",
           }}
         />
-        <Companion size={150} className="anim-bob" />
+        <Companion size={138} className="anim-bob" />
       </button>
     </div>
   );

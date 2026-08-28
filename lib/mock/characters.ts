@@ -20,14 +20,14 @@ export const CHARACTERS: Character[] = [
   {
     id: "renn",
     name: "Renn",
-    species: "fox",
+    species: "kitten",
     personality: "智慧的 reframer；把自责重新框架（“房间没有拒绝你”）",
     color: "#FFE9B0",
   },
   {
     id: "tola",
     name: "Tola",
-    species: "bear",
+    species: "raccoon",
     personality: "柔软、肯定型；负责拥抱和兜底",
     color: "#DCDFF0",
   },
@@ -41,7 +41,7 @@ export const CHARACTERS: Character[] = [
   {
     id: "ivo",
     name: "Ivo",
-    species: "owl",
+    species: "rabbit", // 新美术是绿兔(和 Sena 的粉兔区分);README 记录的"鸭/owl"素材问题随黏土风美术替换消解
     personality: "冷静的观察者；给结构化的小洞察",
     color: "#C2E4EE",
   },
