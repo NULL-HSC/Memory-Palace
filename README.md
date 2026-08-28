@@ -88,3 +88,5 @@ components/ui/              # MountedPrint / NewStorySlot / Waveform / TypeText 
 - **EdgeOne Pages 部署(24–28h)**:推 GitHub → 导入 → 构建命令 `npm run build`
   (不是 `build:app`)→ 环境变量加 `BACKEND_URL`。
 - **AIGC 视频**:F4 舞台已是槽位 —— 真视频就绪后在 `SandplayStage` 里 crossfade 600ms 接入。
+
+- 后端仓库：https://gitee.com/pastyy/shenicest-backend/invite_link?invite=f6c55a84c7a18d975046256cc77f01db71dd7cf55caa3d2ce511b1509403e86e96b74f9670d13b6dbf94c493d6df8dec
