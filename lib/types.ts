@@ -32,6 +32,22 @@ export interface Persona {
   name: string;
   profile: string;
   avatar: string;
+  /** 说话方式 —— 驱动群聊里这个角色的语气/用词/回避什么;缺省时只按 profile 演 */
+  voice?: string;
+  /** 立场与诉求 —— 让几个角色在同一件事上有真实分歧,而不是齐声附和 */
+  stance?: string;
+  /** 外观描述 —— 交给 VLM 画这个角色(本地演示路径暂无 VLM,先产出备用) */
+  appearance?: string;
+}
+
+/**
+ * 故事解构里的场景部分 —— 交给 VLM 生成情景演绎视频。
+ * 与人设同一次 LLM 调用产出,保证"画面里的人"和"群聊里的人"是同一批。
+ */
+export interface StoryScene {
+  setting: string;
+  mood: string;
+  beats: string[];
 }
 
 export interface DialogueTurn {
