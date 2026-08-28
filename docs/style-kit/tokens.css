@@ -1,0 +1,80 @@
+/* ============================================================
+   My Stories — design tokens
+   Palette is the signed-off "My Stories Color System".
+   Names below match the swatch sheet exactly.
+
+   ONE colour is added: --ink (Deep Ink). It is a darker step of
+   Ink Blue, required because no colour in the sheet can carry
+   small text at 4.5:1 on Clear Sky or Butter. See guideline §4.
+   ============================================================ */
+
+:root {
+  /* ---- The seven. Do not add to this list. ---- */
+  --cream:   #FFF9EE;   /* Cream Paper  · 45% of any screen */
+  --mist:    #D9EEF4;   /* Mist Blue    · 20% */
+  --sky:     #8ED4E8;   /* Clear Sky    · 15% */
+  --story:   #2F9FC8;   /* Story Blue   · 10% */
+  --butter:  #FFD86A;   /* Butter Yellow·  7% */
+  --ink-blue:#176A91;   /* Ink Blue     ·  3% */
+  --coral:   #F2674F;   /* Accent, spot use only */
+
+  /* ---- Derived. Structural, not new brand colours. ---- */
+  --ink:          #125571;  /* Deep Ink. ALL small text. 7.82:1 on cream */
+  --butter-under: #E9B84A;  /* underside of a butter control */
+  --sky-under:    var(--story);   /* underside of a sky control */
+
+  /* ---- Text roles ---- */
+  --text:          var(--ink);       /* body, labels, anything under 19px */
+  --text-large:    var(--ink-blue);  /* ≥19px only: hand-lettered titles */
+  --text-on-ink:   var(--cream);     /* 5.71:1 */
+  --text-on-sky:   var(--ink);       /* 4.97:1 — never cream, see §4 */
+  --text-on-butter:var(--ink);       /* 5.96:1 — never cream */
+  --text-on-mist:  var(--ink);       /* 6.82:1 */
+
+  /* ---- Surfaces ----
+     Cream is BOTH the ground and the card. Cards are separated by
+     shadow, never by a lighter fill — there is nothing lighter than
+     Cream Paper in this system, and inventing one breaks the sheet. */
+  --ground:  var(--cream);
+  --raised:  var(--cream);
+  --sunken:  var(--mist);
+
+  /* ---- Radius ---- */
+  --r-pill:  999px;
+  --r-card:  28px;
+  --r-panel: 22px;
+  --r-chip:  16px;
+  --r-photo: 6px;   /* the one near-square: a printed photo in a frame */
+
+  /* ---- Elevation. Shadows are Ink Blue, never grey or black. ---- */
+  --lift-1: 0 3px 10px rgba(23, 106, 145, 0.12);
+  --lift-2: 0 8px 20px rgba(23, 106, 145, 0.16);
+  --lift-3: 0 16px 34px rgba(23, 106, 145, 0.20);
+  /* Pressable things get a hard underside instead of a blur. */
+  --press-butter: 0 4px 0 var(--butter-under);
+  --press-sky:    0 4px 0 var(--sky-under);
+
+  /* ---- Type ---- */
+  --font-hand: "Shantell Sans", "Comic Sans MS", cursive;
+  --font-ui:   "Quicksand", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
+
+  --t-display: 30px;  /* hand */
+  --t-title:   22px;  /* hand */
+  --t-lead:    19px;  /* ui 700. 19 not 18: see §4, large-text threshold */
+  --t-body:    15px;  /* ui 500 */
+  --t-label:   13px;  /* ui 600 */
+  --t-micro:   11px;  /* ui 600, +0.04em */
+
+  /* ---- Space. 4px base. ---- */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+
+  --screen-x: 20px;
+  --tabbar-h: 96px;
+
+  /* ---- Motion ---- */
+  --ease-soft:   cubic-bezier(.34, .8, .38, 1);
+  --ease-bounce: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-tap:  140ms;
+  --dur-move: 320ms;
+}
