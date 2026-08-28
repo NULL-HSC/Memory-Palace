@@ -153,8 +153,10 @@ function Shell() {
           story={(pending ?? activeStory)!}
           persona={pending ? persona : null}
           cast={pending ? (castPersonas ?? undefined) : undefined}
-          onBack={pending ? () => setFrame("draft") : backHome}
+          /* 草稿:返回键在组件内弹二次确认(Keep it → onKeep / Let it go → onDiscard),onBack 仅作兜底;老故事:onBack 直接回主页 */
+          onBack={pending ? discardPending : backHome}
           onKeep={pending ? () => setFrame("draft") : undefined}
+          onDiscard={pending ? discardPending : undefined}
         />
       )}
       {frame === "spaces" && <F5Spaces onBack={backHome} />}

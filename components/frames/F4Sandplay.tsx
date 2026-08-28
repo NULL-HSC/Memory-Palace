@@ -37,12 +37,14 @@ export default function F4Sandplay({
   cast,
   onBack,
   onKeep,
+  onDiscard,
 }: {
   story: Story;
   persona?: Persona | null; // 用户带入的角色：发言以该角色身份出现在群聊里
   cast?: Persona[]; // 故事 Top 3；老故事没有时回退到 mock 阵容(仅元数据,发言仍是真 LLM)
   onBack: () => void;
-  onKeep?: () => void; // 草稿故事:结束弹窗里给 Keep 入口
+  onKeep?: () => void; // 草稿故事:结束弹窗/End 按钮/返回确认里给 Keep 入口
+  onDiscard?: () => void; // 草稿故事:返回确认弹窗里"Let it go"丢弃草稿
 }) {
   const castList = useMemo(() => (cast && cast.length > 0 ? cast : MOCK_PERSONAS), [cast]);
   /** AI 发言者 = Top 3 中除用户带入者之外的人设(各自独立 LLM session) */
@@ -57,6 +59,7 @@ export default function F4Sandplay({
   const [streaming, setStreaming] = useState<SpeakerTurn | null>(null);
   const [input, setInput] = useState("");
   const [showEnd, setShowEnd] = useState(false); // 三轮无互动 → 结束弹窗
+  const [showLeave, setShowLeave] = useState(false); // 草稿流程返回键 → 二次确认弹窗
   const [llmError, setLlmError] = useState<{ mode: TurnMode; speakers: string[]; after: () => void; userMessage?: string } | null>(null); // 最近失败的一轮,给弹幕区重试入口
 
   const queueRef = useRef<SpeakerTurn[]>([]);
@@ -107,6 +110,9 @@ export default function F4Sandplay({
 
   /** 跑一轮 LLM 发言;失败在弹幕区给重试入口、节奏继续(全真实模式,不塞假数据) */
   async function runRound(mode: TurnMode, speakers: string[], after: () => void, userMessage?: string) {
+    // 即时反馈:请求期间就先亮出"对方正在输入"(3-6s 的 LLM 等待不再像没人搭理);
+    // 返回后若首位发言人相同,pump 接管 typingId 无闪烁
+    if (speakers.length > 0 && aliveRef.current) setTypingId(speakers[0]);
     try {
       const turns = await runTurn(mode, speakers, {
         transcript: storyRef.current.transcript,
@@ -122,10 +128,15 @@ export default function F4Sandplay({
       if (turns.length > 0) {
         queueRef.current.push(...turns);
         await pump();
+      } else {
+        setTypingId(null); // 全员沉默 → 收起 typing 预告
       }
     } catch (e) {
       console.error(`[sandplay] ${mode} 轮 LLM 调用失败:`, e);
-      if (aliveRef.current) setLlmError({ mode, speakers, after, userMessage });
+      if (aliveRef.current) {
+        setTypingId(null); // 失败 → 收起 typing,弹幕区给重试入口
+        setLlmError({ mode, speakers, after, userMessage });
+      }
     }
     if (aliveRef.current) after();
   }
@@ -158,6 +169,7 @@ export default function F4Sandplay({
     setStreaming(null);
     setTypingId(null);
     setShowEnd(false);
+    setShowLeave(false);
     setLlmError(null);
     void runRound("opening", aiSpeakersRef.current, waitForUser);
     return () => {
@@ -203,19 +215,30 @@ export default function F4Sandplay({
         }}
       >
         <div className="nav-bar">
-          <button className="nav-side back-chevron" onClick={onBack} aria-label="Back">
+          {/* 草稿流程(onKeep 存在):返回先弹二次确认;老故事直接回主页 */}
+          <button className="nav-side back-chevron" onClick={() => (onKeep ? setShowLeave(true) : onBack())} aria-label="Back">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M15 5l-7 7 7 7" />
             </svg>
           </button>
           <span className="nav-title">The sandplay</span>
-          <button className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }} aria-label="More options">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-              <circle cx="12" cy="5" r="1.4" />
-              <circle cx="12" cy="12" r="1.4" />
-              <circle cx="12" cy="19" r="1.4" />
-            </svg>
-          </button>
+          {onKeep ? (
+            <button
+              className="nav-side"
+              onClick={onKeep}
+              style={{ justifyContent: "flex-end", marginRight: -12, minHeight: 44, fontSize: 14, fontStyle: "italic", color: "var(--readable)" }}
+            >
+              End
+            </button>
+          ) : (
+            <span className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }} aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                <circle cx="12" cy="5" r="1.4" />
+                <circle cx="12" cy="12" r="1.4" />
+                <circle cx="12" cy="19" r="1.4" />
+              </svg>
+            </span>
+          )}
         </div>
       </div>
 
@@ -362,6 +385,64 @@ export default function F4Sandplay({
               style={{ width: "100%", minHeight: 44, marginTop: 6, fontSize: 14, fontStyle: "italic", color: "var(--muted)" }}
             >
               Stay a little longer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ══ 草稿流程返回键 → 二次确认:Keep 存档 / 丢弃草稿 ══ */}
+      {showLeave && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,249,238,0.42)",
+            backdropFilter: "blur(3px)",
+            zIndex: 30,
+          }}
+        >
+          <div
+            style={{
+              width: 300,
+              background: "rgba(255,255,255,0.95)",
+              borderRadius: 20,
+              padding: "26px 22px 18px",
+              textAlign: "center",
+              boxShadow: "var(--shadow-button)",
+              animation: "bubbleIn 400ms var(--ease-soft) both",
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>Keep this story before you go?</div>
+            <div className="meta-italic" style={{ marginTop: 8, fontSize: 13 }}>
+              It can stay with you — or drift away, unkept.
+            </div>
+            <button
+              onClick={() => {
+                setShowLeave(false);
+                onKeep?.();
+              }}
+              style={{
+                width: "100%",
+                height: 48,
+                borderRadius: 24,
+                background: "var(--accent)",
+                boxShadow: "var(--shadow-button)",
+                marginTop: 18,
+              }}
+            >
+              <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--paper)" }}>Keep it</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowLeave(false);
+                (onDiscard ?? onBack)();
+              }}
+              style={{ width: "100%", minHeight: 44, marginTop: 6, fontSize: 14, fontStyle: "italic", color: "var(--muted)" }}
+            >
+              Let it go
             </button>
           </div>
         </div>
