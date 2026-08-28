@@ -1,44 +1,44 @@
 /* ============================================================
-   理理理 · Design Tokens —— sandplay-handoff-v1 spec.html §2
-   （视觉唯一事实来源；交互决策以 理理理.md v3 为准）
+   理理理 · Design Tokens —— 晴空蓝剪贴簿色系（美术 2026-08 更新）
+   比例：奶油纸 45% / 雾蓝 20% / 天蓝 15% / 故事蓝 10% / 奶油黄 7% / 墨蓝 3% / 珊瑚点缀
    ============================================================ */
 :root {
   /* colour */
-  --paper: #faf8f3; /* 屏背景 */
-  --sunken: #f6f3ea; /* archive / transcript 面板 */
+  --paper: #fff9ee; /* 屏背景 · cream paper */
+  --sunken: #eaf6fa; /* archive / transcript 面板 · mist blue 浅调 */
   --raised: #ffffff; /* mounts、气泡、卡片、输入栏 */
-  --accent: #5c6b4a; /* 主按钮、+ badge、用户气泡、进度 */
-  --ink: #1f1c17; /* 标题、正文 */
-  --ink-2: #43403a; /* 转写正文 */
-  --muted: #8a8375; /* 标签、链接、active dot */
-  --faint: #a9a292; /* meta italic、speaker 名 */
-  --placeholder: #b4ac9a; /* 输入占位 */
-  --readable: #7a7364; /* §8 a11y：需阅读的弱色统一加深到 ≈4.6:1 */
-  --line: #e6e1d4; /* mount 边、进度轨 */
-  --line-strong: #d6cfbe; /* 可编辑字段下划线 */
-  --slot-fill: #f2efe4; /* 空 mount 内芯 */
-  --slot-border: #cfc7b2; /* 空 mount 虚线边 1.5px */
-  --sand: #f1e9d6; /* sandplay 沙盘底 */
-  --sand-2: #ede2c8; /* 沙盘丘 */
-  --foliage: #c6d5bb; /* 沙盘灌木 */
-  --avatar-field: #e9eee0; /* 勋章内芯 */
-  --badge: #b6ae9b; /* 计数 pill */
-  --chevron: #5c5648;
-  --inflight: #c3bcaa; /* 转写 in-flight 尾句 */
+  --accent: #f2674f; /* 主按钮、+ badge、进度 · coral 点缀 */
+  --ink: #176a91; /* 标题、正文 · ink blue */
+  --ink-2: #38657d; /* 转写正文 */
+  --muted: #4e86a6; /* 标签、链接、active dot · story blue 降调 */
+  --faint: #7fa9be; /* meta italic、speaker 名 */
+  --placeholder: #9fc3d4; /* 输入占位 */
+  --readable: #3d6e8c; /* §8 a11y：需阅读的弱色统一加深到 ≈4.6:1 */
+  --line: #d9eef4; /* mount 边、进度轨 · mist blue */
+  --line-strong: #a9d4e2; /* 可编辑字段下划线 */
+  --slot-fill: #edf7fa; /* 空 mount 内芯 */
+  --slot-border: #a9d4e2; /* 空 mount 虚线边 1.5px */
+  --sand: #d9eef4; /* sandplay 沙盘底 · mist blue */
+  --sand-2: #c2e4ee; /* 沙盘丘 */
+  --foliage: #9ad9e9; /* 沙盘灌木 · clear sky 浅调 */
+  --avatar-field: #eaf6fa; /* 勋章内芯 */
+  --badge: #2f9fc8; /* 计数 pill · story blue */
+  --chevron: #176a91;
+  --inflight: #9fc3d4; /* 转写 in-flight 尾句 */
 
   /* geometry（§2 Geometry） */
   --screen-x: 24px;
   --screen-top: 54px;
   --screen-bottom: 34px;
 
-  /* elevation —— shadow colour rgba(60,54,40,α) */
-  --shadow-print-mid: 0 6px 16px rgba(60, 54, 40, 0.09);
-  --shadow-print-focus: 0 18px 38px rgba(60, 54, 40, 0.19);
-  --shadow-print-review: 0 12px 28px rgba(60, 54, 40, 0.14);
-  --shadow-button: 0 6px 16px rgba(60, 54, 40, 0.18);
-  --shadow-input: 0 3px 10px rgba(60, 54, 40, 0.06);
-  --shadow-card: 0 4px 12px rgba(60, 54, 40, 0.07);
-  --shadow-tray: inset 0 2px 10px rgba(120, 102, 66, 0.14);
+  /* elevation —— shadow colour rgba(23,60,84,α) 冷蓝投影 */
+  --shadow-print-mid: 0 6px 16px rgba(23, 60, 84, 0.09);
+  --shadow-print-focus: 0 18px 38px rgba(23, 60, 84, 0.19);
+  --shadow-print-review: 0 12px 28px rgba(23, 60, 84, 0.14);
+  --shadow-button: 0 6px 16px rgba(23, 60, 84, 0.18);
+  --shadow-input: 0 3px 10px rgba(23, 60, 84, 0.06);
+  --shadow-card: 0 4px 12px rgba(23, 60, 84, 0.07);
+  --shadow-tray: inset 0 2px 10px rgba(46, 109, 140, 0.14);
 
   /* motion（§3.2 建议曲线） */
   --ease-fan: cubic-bezier(0.32, 0.72, 0.32, 1);
@@ -97,12 +97,12 @@ textarea {
   body {
     display: grid;
     place-items: center;
-    background: #e9e6de;
+    background: #dcebf2;
   }
   .app-shell {
     width: 390px;
     height: min(844px, 96dvh);
-    box-shadow: 0 24px 80px rgba(60, 54, 40, 0.22);
+    box-shadow: 0 24px 80px rgba(23, 60, 84, 0.22);
   }
 }
 
@@ -347,7 +347,7 @@ textarea {
 }
 
 ::selection {
-  background: rgba(92, 107, 74, 0.22);
+  background: rgba(47, 159, 200, 0.25);
 }
 input:focus,
 textarea:focus,

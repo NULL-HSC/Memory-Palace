@@ -78,7 +78,7 @@ export default function F2Listening({
         </span>
       </div>
 
-      {/* 转写区：纯输入界面的主角；落定 ink / in-flight #C3BCAA */}
+      {/* 转写区：纯输入界面的主角；落定 ink / in-flight #9FC3D4 */}
       <div style={{ marginTop: 34, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         <span className="meta-italic">{typeMode ? "Typing" : "Listening"}</span>
         {typeMode ? (
@@ -134,10 +134,10 @@ export default function F2Listening({
             height: 84,
             borderRadius: "50%",
             background: "var(--accent)",
-            boxShadow: "0 8px 22px rgba(60,54,40,0.24)",
+            boxShadow: "0 8px 22px rgba(23,60,84,0.24)",
           }}
         >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FAF8F3" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
             <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
             <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
           </svg>
@@ -151,7 +151,7 @@ export default function F2Listening({
             textAlign: "left",
             fontSize: 14,
             fontStyle: "italic",
-            color: "#5C5648",
+            color: "#38657D",
             opacity: canDone ? 1 : 0.35,
             transition: "opacity 300ms",
           }}

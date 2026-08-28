@@ -32,9 +32,15 @@ export interface Persona {
 
 export interface DialogueTurn {
   storyId: string;
-  speakerId: CharacterId;
+  speakerId: string; // persona id（板块二:故事 Top 3）或 "user"
   text: string;
   ts: number;
+}
+
+/** 群聊一轮中的一条发言（LLM 返回,尚未落进消息列表） */
+export interface SpeakerTurn {
+  speakerId: string; // persona id
+  text: string;
 }
 
 export interface Room {

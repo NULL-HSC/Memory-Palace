@@ -124,7 +124,7 @@ export default function F1Home({
           </span>
         </div>
         <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }}>
-          <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--muted)", borderBottom: "1px solid #DCD6C8", paddingBottom: 2 }}>
+          <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--muted)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
             Visit other spaces
           </span>
         </button>
@@ -144,7 +144,7 @@ export default function F1Home({
           style={{
             position: "absolute",
             inset: "8% -20%",
-            background: "radial-gradient(ellipse at 50% 42%, rgba(214,196,158,0.28) 0%, rgba(196,209,178,0.16) 45%, transparent 70%)",
+            background: "radial-gradient(ellipse at 50% 42%, rgba(142,212,232,0.30) 0%, rgba(217,238,244,0.20) 45%, transparent 70%)",
             pointerEvents: "none",
           }}
         />
@@ -194,7 +194,7 @@ export default function F1Home({
                 {/* 前置卡：缓慢浮动 + 更深投影，选中态突出 */}
                 <div
                   className={i === front ? "anim-float" : undefined}
-                  style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(60,54,40,0.20))" } : undefined}
+                  style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(23,60,84,0.20))" } : undefined}
                 >
                   <MountedPrint variant="focused" cover={s.cover} checked={i === front} />
                 </div>
@@ -260,7 +260,7 @@ export default function F1Home({
           }}
         >
           <span style={{ fontSize: 17, fontWeight: 500, color: "var(--paper)" }}>Create the sandplay</span>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FAF8F3" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M5 12h13M12 5l7 7-7 7" />
           </svg>
         </button>
@@ -283,7 +283,7 @@ export default function F1Home({
             width: 120,
             height: 22,
             borderRadius: "50%",
-            background: "rgba(60,54,40,0.10)",
+            background: "rgba(23,60,84,0.10)",
             filter: "blur(4px)",
           }}
         />

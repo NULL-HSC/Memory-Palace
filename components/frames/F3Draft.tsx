@@ -83,7 +83,7 @@ export default function F3Draft({
       <div style={{ marginTop: 26, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, borderBottom: "1px solid var(--line-strong)", paddingBottom: 10 }}>
           {titleLoading ? (
-            <div className="shimmer" style={{ height: 32, flex: 1, background: "rgba(169,162,146,0.18)" }} />
+            <div className="shimmer" style={{ height: 32, flex: 1, background: "rgba(159,195,212,0.25)" }} />
           ) : (
             <input
               value={title}
@@ -104,7 +104,7 @@ export default function F3Draft({
               }}
             />
           )}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9C9585" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 7, flexShrink: 0 }} aria-hidden>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7FA9BE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 7, flexShrink: 0 }} aria-hidden>
             <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
           </svg>
         </div>
@@ -128,7 +128,7 @@ export default function F3Draft({
                   padding: "12px 6px 10px",
                   borderRadius: 16,
                   border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(92,107,74,0.08)" : "#FFFFFF",
+                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "center",

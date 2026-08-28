@@ -52,15 +52,15 @@ cp .env.example .env.local
 ```
 app/page.tsx                # 帧状态机 F1–F5 + T1 转场 overlay
 app/api/[...path]/route.ts  # 通用代理路由(转发时去掉 /api 前缀)
-app/globals.css             # handoff §2 design tokens + §6 全部动效
+app/globals.css             # design tokens(晴空蓝剪贴簿色系,美术 2026-08)+ 全部动效
 lib/api.ts                  # 唯一请求入口 + USE_MOCK 开关
 lib/store.tsx               # stories + Lv 进度(localStorage 持久化)
-lib/mock/                   # 种子故事 / 伪转写文本 / 标题池 / 脚本对白 / 人设 Top 3
+lib/mock/                   # 种子故事 / 伪转写文本 / 标题池 / 人设 Top 3(对话链路已无 mock,全真实 LLM)
 docs/backend-progress.md    # 后端联调进度实测记录(按时间戳往顶部追加)
 docs/product-flow.md        # 产品与交互定义(逐页确认的唯一口径)
 public/avatars/             # handoff 角色 PNG(占位美术,正式交付后整体替换)
 components/characters/      # Avatar 组件(img 封装,接口稳定)
-components/scene/           # F4 沙盘(AIGC video 槽位:shimmer 兜底 + speaker 焦点)
+components/scene/           # F4 舞台(AIGC video 槽位:"演绎中"加载态 + crossfade 进场 + 说话者焦点)
 components/frames/          # F1Home F2Listening PickRole F3Draft F4Sandplay F5Spaces
 components/ui/              # MountedPrint / NewStorySlot / Waveform / TypeText / TypingIndicator / Toast
 ```
@@ -68,7 +68,7 @@ components/ui/              # MountedPrint / NewStorySlot / Waveform / TypeText 
 ## 两份文档的取舍记录(冲突时怎么落的)
 
 - F3:挪到沙盘对话结束之后(Keep 页)—— 封面系统生成,标题可编辑,可见性 Private / Friends / Community,"In your words" 转写回顾;理理理的封面选择行/反思输入未做
-- F4:外观按 handoff 沙盘(196px tray + sway 小像),行为按理理理 —— 说话者焦点联动、shimmer 兜底(它是 AIGC video 槽位)
+- F4:直播间形态 —— 全幅舞台(AIGC video 槽位,"演绎中"加载态 + crossfade 进场)+ 弹幕式对话浮层;群聊 = 故事 Top 3 人设,用户带入一角,说话者焦点联动(详见 docs/product-flow.md)
 - F5:计数徽标按理理理 v3 决策移除;Ivo 的 PNG 是鸭(理理理写作 owl),正式美术交付时统一
 - §8 a11y 已落:需阅读的弱色(日期/speaker 名/placeholder)加深到 #7A7364、44px 触控区、prefers-reduced-motion
 

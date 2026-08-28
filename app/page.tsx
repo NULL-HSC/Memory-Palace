@@ -30,6 +30,7 @@ function Shell() {
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [pending, setPending] = useState<Story | null>(null); // 未 Keep 的草稿故事
   const [persona, setPersona] = useState<Persona | null>(null); // 用户选择带入的角色
+  const [castPersonas, setCastPersonas] = useState<Persona[] | null>(null); // 故事 Top 3 完整阵容
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
 
   /* 转场两段式：挂载后触发位移，结束后切帧（目前仅 T1 使用） */
@@ -58,6 +59,7 @@ function Shell() {
   /* T1 · Home → Listening：点 companion / "+" */
   const startNewStory = () => {
     setPersona(null);
+    setCastPersonas(null);
     setOverlay("t1");
     setOverlayGo(false);
   };
@@ -88,6 +90,7 @@ function Shell() {
     addStory(draft);
     setPending(null);
     setPersona(null);
+    setCastPersonas(null);
     backHome();
   };
 
@@ -95,6 +98,7 @@ function Shell() {
   const discardPending = () => {
     setPending(null);
     setPersona(null);
+    setCastPersonas(null);
     backHome();
   };
 
@@ -119,12 +123,13 @@ function Shell() {
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
-      {frame === "pick" && <PickRole onBack={discardPending} onPick={(p) => { setPersona(p); setFrame("sandplay"); }} />}
+      {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} onBack={discardPending} onPick={(p, all) => { setPersona(p); setCastPersonas(all); setFrame("sandplay"); }} />}
       {frame === "draft" && <F3Draft transcript={transcript} onBack={discardPending} onKeep={handleKeep} />}
       {frame === "sandplay" && (pending || activeStory) && (
         <F4Sandplay
           story={(pending ?? activeStory)!}
           persona={pending ? persona : null}
+          cast={pending ? (castPersonas ?? undefined) : undefined}
           onBack={pending ? () => setFrame("draft") : backHome}
           onKeep={pending ? () => setFrame("draft") : undefined}
         />

@@ -9,10 +9,10 @@ import { characterById } from "@/lib/mock/characters";
    封面始终 object-fit: cover（交付 ≥206×244，主体居中）。 */
 
 const VARIANTS = {
-  focused: { w: 230, h: 296, pad: "12px 12px 40px", shadow: "var(--shadow-print-focus)", border: "#E6E1D4" },
-  mid: { w: 198, h: 255, pad: "10px 10px 34px", shadow: "var(--shadow-print-mid)", border: "#E6E1D4" },
-  edge: { w: 166, h: 214, pad: "8px 8px 28px", shadow: "none", border: "#E4DFD2" },
-  review: { w: 186, h: 240, pad: "10px 10px 34px", shadow: "var(--shadow-print-review)", border: "#E6E1D4" },
+  focused: { w: 230, h: 296, pad: "12px 12px 40px", shadow: "var(--shadow-print-focus)", border: "#D9EEF4" },
+  mid: { w: 198, h: 255, pad: "10px 10px 34px", shadow: "var(--shadow-print-mid)", border: "#D9EEF4" },
+  edge: { w: 166, h: 214, pad: "8px 8px 28px", shadow: "none", border: "#C2E4EE" },
+  review: { w: 186, h: 240, pad: "10px 10px 34px", shadow: "var(--shadow-print-review)", border: "#D9EEF4" },
 } as const;
 
 export type PrintVariant = keyof typeof VARIANTS;
@@ -22,31 +22,31 @@ export function CoverArt({ cover }: { cover: string }) {
   if (cover === "blush")
     return (
       <svg viewBox="0 0 178 211" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden>
-        <rect width="178" height="211" fill="#EFD9CB" />
-        <circle cx="130" cy="50" r="21" fill="#DFBAA3" />
-        <path d="M0 146 C34 120 68 133 96 146 C120 157 148 139 178 148 L178 211 L0 211 Z" fill="#E1C3AF" />
-        <path d="M0 172 C40 152 80 172 118 166 C146 162 162 176 178 172 L178 211 L0 211 Z" fill="#D2AC93" />
+        <rect width="178" height="211" fill="#FFE9B0" />
+        <circle cx="130" cy="50" r="21" fill="#FFD86A" />
+        <path d="M0 146 C34 120 68 133 96 146 C120 157 148 139 178 148 L178 211 L0 211 Z" fill="#FFDE8E" />
+        <path d="M0 172 C40 152 80 172 118 166 C146 162 162 176 178 172 L178 211 L0 211 Z" fill="#F5CE6B" />
       </svg>
     );
   if (cover === "lavender")
     return (
       <svg viewBox="0 0 150 178" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden>
-        <rect width="150" height="178" fill="#DCDFEC" />
-        <circle cx="112" cy="42" r="15" fill="#EFEDE3" />
-        <path d="M0 122 C30 100 58 111 82 122 C101 131 126 116 150 124 L150 178 L0 178 Z" fill="#C3C7D8" />
-        <path d="M0 145 C35 128 68 145 100 140 C124 136 138 148 150 145 L150 178 L0 178 Z" fill="#B0B5C8" />
+        <rect width="150" height="178" fill="#D9EEF4" />
+        <circle cx="112" cy="42" r="15" fill="#FFF9EE" />
+        <path d="M0 122 C30 100 58 111 82 122 C101 131 126 116 150 124 L150 178 L0 178 Z" fill="#AEE0EF" />
+        <path d="M0 145 C35 128 68 145 100 140 C124 136 138 148 150 145 L150 178 L0 178 Z" fill="#8ED4E8" />
       </svg>
     );
   return (
     <svg viewBox="0 0 206 244" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden>
-      <rect width="206" height="244" fill="#D8E4CA" />
-      <circle cx="50" cy="50" r="20" fill="#EFE6BE" />
-      <path d="M0 160 C41 128 82 144 118 160 C143 171 172 152 206 163 L206 244 L0 244 Z" fill="#BFD0AE" />
-      <path d="M130 210 L130 178" stroke="#8FA37F" strokeWidth="3.6" strokeLinecap="round" />
-      <circle cx="130" cy="170" r="16" fill="#9DB389" />
-      <circle cx="115" cy="182" r="11" fill="#ADC29A" />
-      <circle cx="146" cy="183" r="10" fill="#ADC29A" />
-      <path d="M0 199 C47 176 93 199 137 192 C169 187 187 202 206 199 L206 244 L0 244 Z" fill="#A9BF95" />
+      <rect width="206" height="244" fill="#D9EEF4" />
+      <circle cx="50" cy="50" r="20" fill="#FFE9B0" />
+      <path d="M0 160 C41 128 82 144 118 160 C143 171 172 152 206 163 L206 244 L0 244 Z" fill="#AEE0EF" />
+      <path d="M130 210 L130 178" stroke="#2F9FC8" strokeWidth="3.6" strokeLinecap="round" />
+      <circle cx="130" cy="170" r="16" fill="#8ED4E8" />
+      <circle cx="115" cy="182" r="11" fill="#C2E4EE" />
+      <circle cx="146" cy="183" r="10" fill="#C2E4EE" />
+      <path d="M0 199 C47 176 93 199 137 192 C169 187 187 202 206 199 L206 244 L0 244 Z" fill="#9AD9E9" />
     </svg>
   );
 }
@@ -101,13 +101,13 @@ export function MountedPrint({
             width: 24,
             height: 24,
             borderRadius: "50%",
-            background: "#EDE7D6",
+            background: "#EAF6FA",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A99873" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4E86A6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M4 13l5 5L20 6" />
           </svg>
         </span>
@@ -123,8 +123,8 @@ export function BlankMount({ style }: { style?: React.CSSProperties }) {
       style={{
         width: VARIANTS.edge.w,
         height: VARIANTS.edge.h,
-        background: "#F1EEE5",
-        border: "1px solid #E4DFD2",
+        background: "#EDF7FA",
+        border: "1px solid #C2E4EE",
         borderRadius: 16,
         ...style,
       }}
@@ -142,9 +142,9 @@ export function NewStorySlot({ style, onClick }: { style?: React.CSSProperties; 
         width: VARIANTS.mid.w,
         height: VARIANTS.mid.h,
         background: "#FFFFFF",
-        border: "1px solid #E6E1D4",
+        border: "1px solid #D9EEF4",
         padding: "10px 10px 34px",
-        boxShadow: "0 6px 16px rgba(60,54,40,0.10)",
+        boxShadow: "0 6px 16px rgba(23,60,84,0.10)",
         position: "relative",
         ...style,
       }}
@@ -170,10 +170,10 @@ export function NewStorySlot({ style, onClick }: { style?: React.CSSProperties; 
             height: 48,
             borderRadius: "50%",
             background: "var(--accent)",
-            boxShadow: "0 4px 10px rgba(60,54,40,0.2)",
+            boxShadow: "0 4px 10px rgba(23,60,84,0.2)",
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FAF8F3" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
             <path d="M12 5v14M5 12h14" />
           </svg>
         </span>
@@ -188,14 +188,14 @@ export function NewStorySlot({ style, onClick }: { style?: React.CSSProperties; 
 /* ================= Waveform —— §4.2：8 bars · 4px · talk(scaleY) ================= */
 
 const BARS = [
-  { h: 16, c: "#C6C0AE" },
-  { h: 30, c: "#AEB79E" },
-  { h: 42, c: "#8FA37F" },
-  { h: 26, c: "#AEB79E" },
-  { h: 38, c: "#8FA37F" },
-  { h: 20, c: "#C6C0AE" },
-  { h: 34, c: "#AEB79E" },
-  { h: 14, c: "#C6C0AE" },
+  { h: 16, c: "#C2E4EE" },
+  { h: 30, c: "#8ED4E8" },
+  { h: 42, c: "#2F9FC8" },
+  { h: 26, c: "#8ED4E8" },
+  { h: 38, c: "#2F9FC8" },
+  { h: 20, c: "#C2E4EE" },
+  { h: 34, c: "#8ED4E8" },
+  { h: 14, c: "#C2E4EE" },
 ];
 
 export function Waveform({ active }: { active: boolean }) {
@@ -255,7 +255,7 @@ export function TypeText({
   return (
     <span>
       {text.slice(0, n)}
-      {n < text.length && <span className="anim-blink" style={{ color: "#8FA37F", fontWeight: 300 }}>|</span>}
+      {n < text.length && <span className="anim-blink" style={{ color: "#2F9FC8", fontWeight: 300 }}>|</span>}
     </span>
   );
 }
@@ -278,7 +278,7 @@ export function TypingIndicator({ speakerId }: { speakerId: FaceId }) {
             padding: "14px 16px",
             borderRadius: "4px 16px 16px 16px",
             background: "#FFFFFF",
-            border: "1px solid #EAE5D8",
+            border: "1px solid #D9EEF4",
           }}
         >
           {[0, 1, 2].map((i) => (
@@ -289,7 +289,7 @@ export function TypingIndicator({ speakerId }: { speakerId: FaceId }) {
                 width: 5,
                 height: 5,
                 borderRadius: "50%",
-                background: "#A9A292",
+                background: "#9FC3D4",
                 animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
               }}
             />

@@ -1,67 +1,96 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { CharacterId, DialogueTurn, Persona, Story } from "@/lib/types";
-import { getOpeningTurns, getResponseTurns } from "@/lib/api";
-import { QUIET_CLOSING, toTurn } from "@/lib/mock/dialogue";
-import { characterById } from "@/lib/mock/characters";
-import { type FaceId } from "../characters";
-import { TypeText, TypingIndicator, ChatAvatar } from "../ui";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DialogueTurn, Persona, SpeakerTurn, Story } from "@/lib/types";
+import { runTurn, type TurnMode } from "@/lib/api";
+import { MOCK_PERSONAS } from "@/lib/mock/personas";
+import { TypeText } from "../ui";
 import SandplayStage from "../scene/SandplayStage";
 
 /**
- * F4 — The sandplay · v3（互动影游 / 直播弹幕形态）
- * 竖屏全幅舞台 = 对话发生的世界;对话以弹幕式浮层盖在画面上:
- * 新消息从底部流入,向上漂、渐隐进场景;输入栏悬浮于画面之上。
- * 编排逻辑不变(§8.3):typing 预告 → 逐字流出 → 落定;用户插话 1–2 位回应;
- * 不发言时少量轮次后自然收敛。
+ * F4 — The sandplay · 板块二（直播间形态,全真实 LLM,无 mock）
+ * 群聊节奏(docs/product-flow.md F4):
+ *   opening  暖场几句 → 停下来等用户(WAIT_AFTER_OPENING)
+ *   continue 用户沉默 → AI 之间续聊一轮 → 再等(WAIT_AFTER_CONTINUE)
+ *   invite   仍沉默 → 一位 AI 点名邀请用户带入的角色 → 再等(WAIT_AFTER_INVITE)
+ *   end      三轮仍无互动 → 弹窗问用户要不要结束(Keep / 再待会儿)
+ *   用户开口 → answer:所有 AI 直接回应用户 → 节奏重置回 opening 后的等待
+ * 防打架/防卡死:AI 自聊每轮最多 2 位开口、每段沉默期只续一轮;prompt 禁争论禁复读;
+ * 轮内串行可见(后者读得到前者本轮发言)。
  */
 
-type Draft = { speakerId: CharacterId; text: string };
+const WAIT_AFTER_OPENING = 18000;
+const WAIT_AFTER_CONTINUE = 18000;
+const WAIT_AFTER_INVITE = 20000;
+
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const toTurn = (storyId: string, t: SpeakerTurn): DialogueTurn => ({
+  storyId,
+  speakerId: t.speakerId,
+  text: t.text,
+  ts: Date.now(),
+});
 
 export default function F4Sandplay({
   story,
   persona,
+  cast,
   onBack,
   onKeep,
 }: {
   story: Story;
   persona?: Persona | null; // 用户带入的角色：发言以该角色身份出现在群聊里
+  cast?: Persona[]; // 故事 Top 3；老故事没有时回退到 mock 阵容(仅元数据,发言仍是真 LLM)
   onBack: () => void;
-  onKeep?: () => void; // 草稿故事：对话收敛后出现 Keep 入口
+  onKeep?: () => void; // 草稿故事:结束弹窗里给 Keep 入口
 }) {
-  const [messages, setMessages] = useState<DialogueTurn[]>([]);
-  const [typingId, setTypingId] = useState<FaceId | null>(null);
-  const [streaming, setStreaming] = useState<Draft | null>(null);
-  const [input, setInput] = useState("");
-  const [ended, setEnded] = useState(false); // 对话已自然收敛
+  const castList = useMemo(() => (cast && cast.length > 0 ? cast : MOCK_PERSONAS), [cast]);
+  /** AI 发言者 = Top 3 中除用户带入者之外的人设(各自独立 LLM session) */
+  const aiSpeakers = useMemo(
+    () => castList.filter((p) => p.id !== persona?.id).map((p) => p.id),
+    [castList, persona]
+  );
+  const personaById = useCallback((id: string) => castList.find((p) => p.id === id), [castList]);
 
-  const queueRef = useRef<Draft[]>([]);
+  const [messages, setMessages] = useState<DialogueTurn[]>([]);
+  const [typingId, setTypingId] = useState<string | null>(null);
+  const [streaming, setStreaming] = useState<SpeakerTurn | null>(null);
+  const [input, setInput] = useState("");
+  const [showEnd, setShowEnd] = useState(false); // 三轮无互动 → 结束弹窗
+
+  const queueRef = useRef<SpeakerTurn[]>([]);
   const runningRef = useRef(false);
   const resolverRef = useRef<(() => void) | null>(null);
   const aliveRef = useRef(true);
-  const quietTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const quietedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const aiSpeakersRef = useRef(aiSpeakers);
+  aiSpeakersRef.current = aiSpeakers;
+  const castRef = useRef(castList);
+  castRef.current = castList;
+  const personaRef = useRef(persona);
+  personaRef.current = persona;
+  const messagesRef = useRef<DialogueTurn[]>([]);
+  messagesRef.current = messages;
+  const storyRef = useRef(story);
+  storyRef.current = story;
 
-  const scheduleQuiet = useCallback(() => {
-    if (quietTimerRef.current) clearTimeout(quietTimerRef.current);
-    if (quietedRef.current) return;
-    quietTimerRef.current = setTimeout(() => {
-      quietedRef.current = true;
-      queueRef.current.push(...QUIET_CLOSING);
-      void pump();
-    }, 16000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* ── 节奏原语 ── */
 
+  const armTimer = (ms: number, fn: () => void) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (aliveRef.current) fn();
+    }, ms);
+  };
+
+  /** 依次播出队列里的发言:typing 预告 → 逐字流出 → 落定 */
   async function pump() {
     if (runningRef.current) return;
     runningRef.current = true;
     while (queueRef.current.length > 0 && aliveRef.current) {
       const turn = queueRef.current.shift()!;
-      setTypingId(turn.speakerId as FaceId);
+      setTypingId(turn.speakerId);
       await wait(1000);
       if (!aliveRef.current) break;
       setTypingId(null);
@@ -73,28 +102,52 @@ export default function F4Sandplay({
       await wait(420);
     }
     runningRef.current = false;
-    if (quietedRef.current && aliveRef.current) setEnded(true); // 收敛完毕
-    scheduleQuiet();
+  }
+
+  /** 跑一轮 LLM 发言;失败只记日志、节奏继续(全真实模式,不塞假数据) */
+  async function runRound(mode: TurnMode, speakers: string[], after: () => void) {
+    try {
+      const turns = await runTurn(mode, speakers, {
+        transcript: storyRef.current.transcript,
+        cast: castRef.current,
+        history: messagesRef.current,
+        userName: personaRef.current?.name ?? "the narrator",
+      });
+      if (!aliveRef.current) return;
+      if (turns.length > 0) {
+        queueRef.current.push(...turns);
+        await pump();
+      }
+    } catch (e) {
+      console.error(`[sandplay] ${mode} 轮 LLM 调用失败:`, e);
+    }
+    if (aliveRef.current) after();
+  }
+
+  /* 沉默期推进:continue → invite → 结束弹窗 */
+  function stepContinue() {
+    void runRound("continue", aiSpeakersRef.current, () => armTimer(WAIT_AFTER_CONTINUE, stepInvite));
+  }
+  function stepInvite() {
+    const inviter = aiSpeakersRef.current[0];
+    void runRound("invite", inviter ? [inviter] : [], () => armTimer(WAIT_AFTER_INVITE, () => setShowEnd(true)));
+  }
+  /** 一轮活动结束后:等用户 WAIT_AFTER_OPENING,不应则进入沉默期推进 */
+  function waitForUser() {
+    armTimer(WAIT_AFTER_OPENING, stepContinue);
   }
 
   useEffect(() => {
     aliveRef.current = true;
-    quietedRef.current = false;
     queueRef.current = [];
     setMessages([]);
     setStreaming(null);
     setTypingId(null);
-    setEnded(false);
-    let cancelled = false;
-    getOpeningTurns().then((turns) => {
-      if (cancelled) return;
-      queueRef.current.push(...turns);
-      void pump();
-    });
+    setShowEnd(false);
+    void runRound("opening", aiSpeakersRef.current, waitForUser);
     return () => {
-      cancelled = true;
       aliveRef.current = false;
-      if (quietTimerRef.current) clearTimeout(quietTimerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
       resolverRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,23 +161,19 @@ export default function F4Sandplay({
     const text = input.trim();
     if (!text) return;
     setInput("");
-    if (quietTimerRef.current) clearTimeout(quietTimerRef.current);
-    quietedRef.current = false;
-    setEnded(false); // 重新开口 → 收起 Keep 入口
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setShowEnd(false); // 用户回来了 → 收起结束弹窗
     setMessages((m) => [...m, toTurn(story.id, { speakerId: "user", text })]);
-    void getResponseTurns().then((turns) => {
-      if (!aliveRef.current) return;
-      queueRef.current.push(...turns);
-      void pump();
-    });
+    // 用户开口:所有 AI 都要思考如何回应用户,然后节奏重置
+    void runRound("answer", aiSpeakersRef.current, waitForUser);
   };
 
-  const stageSpeaker = (streaming?.speakerId ?? typingId ?? null) as FaceId | null;
+  const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
 
   return (
     <div className="frame frame-enter" style={{ padding: 0 }}>
-      {/* ══ 全幅竖屏舞台(AIGC video 槽位) ══ */}
-      <SandplayStage speakerId={stageSpeaker} title={story.title} />
+      {/* ══ 全幅竖屏舞台(AIGC video 槽位,未就绪时"演绎中"加载态) ══ */}
+      <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} />
 
       {/* ══ 顶部 nav:浮在画面上,带柔光衬底保证可读 ══ */}
       <div
@@ -134,7 +183,7 @@ export default function F4Sandplay({
           left: 0,
           right: 0,
           padding: "var(--screen-top) var(--screen-x) 26px",
-          background: "linear-gradient(180deg, rgba(246,241,228,0.85) 0%, rgba(246,241,228,0) 100%)",
+          background: "linear-gradient(180deg, rgba(255,249,238,0.85) 0%, rgba(255,249,238,0) 100%)",
           zIndex: 10,
         }}
       >
@@ -182,12 +231,12 @@ export default function F4Sandplay({
                   maxWidth: "76%",
                   padding: "9px 14px",
                   borderRadius: "15px 4px 15px 15px",
-                  background: "rgba(92,107,74,0.88)",
+                  background: "rgba(47,159,200,0.92)",
                   backdropFilter: "blur(8px)",
                 }}
               >
                 {persona && (
-                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(250,248,243,0.75)", marginRight: 6 }}>{persona.name}</span>
+                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(255,255,255,0.8)", marginRight: 6 }}>{persona.name}</span>
                 )}
                 <span style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5, color: "var(--paper)" }}>{m.text}</span>
               </div>
@@ -197,7 +246,7 @@ export default function F4Sandplay({
                     width: 30,
                     height: 30,
                     borderRadius: "50%",
-                    background: "#F0EBDD",
+                    background: "#EAF6FA",
                     overflow: "hidden",
                     flexShrink: 0,
                     display: "block",
@@ -209,12 +258,12 @@ export default function F4Sandplay({
               )}
             </div>
           ) : (
-            <DanmakuBubble key={m.ts + m.text} speakerId={m.speakerId as FaceId} text={m.text} />
+            <DanmakuBubble key={m.ts + m.text} speaker={personaById(m.speakerId)} text={m.text} />
           )
         )}
         {streaming && (
           <DanmakuBubble
-            speakerId={streaming.speakerId as FaceId}
+            speaker={personaById(streaming.speakerId)}
             streamingText={streaming.text}
             onStreamDone={() => {
               const done = streaming;
@@ -223,35 +272,67 @@ export default function F4Sandplay({
             }}
           />
         )}
-        {typingId && <TypingIndicator speakerId={typingId} />}
+        {typingId && <PersonaTyping speaker={personaById(typingId)} />}
       </div>
 
-      {/* ══ 对话收敛后:Keep 入口(草稿故事才有) ══ */}
-      {ended && onKeep && (
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 148, display: "flex", justifyContent: "center", zIndex: 12 }}>
-          <button
-            onClick={onKeep}
+      {/* ══ 三轮无互动 → 结束弹窗 ══ */}
+      {showEnd && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,249,238,0.42)",
+            backdropFilter: "blur(3px)",
+            zIndex: 20,
+          }}
+        >
+          <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 9,
-              height: 52,
-              padding: "0 24px",
-              borderRadius: 26,
-              background: "var(--accent)",
+              width: 300,
+              background: "rgba(255,255,255,0.95)",
+              borderRadius: 20,
+              padding: "26px 22px 18px",
+              textAlign: "center",
               boxShadow: "var(--shadow-button)",
-              animation: "bubbleIn 500ms var(--ease-soft) both",
+              animation: "bubbleIn 400ms var(--ease-soft) both",
             }}
           >
-            <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--paper)" }}>Keep this story</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FAF8F3" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M5 12h13M12 5l7 7-7 7" />
-            </svg>
-          </button>
+            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>The room has gone quiet</div>
+            <div className="meta-italic" style={{ marginTop: 8, fontSize: 13 }}>
+              Want to wrap up this story?
+            </div>
+            <button
+              onClick={() => (onKeep ? onKeep() : onBack())}
+              style={{
+                width: "100%",
+                height: 48,
+                borderRadius: 24,
+                background: "var(--accent)",
+                boxShadow: "var(--shadow-button)",
+                marginTop: 18,
+              }}
+            >
+              <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--paper)" }}>
+                {onKeep ? "Keep this story" : "Leave the room"}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setShowEnd(false);
+                waitForUser(); // 再待一会儿:重新进入等待节奏
+              }}
+              style={{ width: "100%", minHeight: 44, marginTop: 6, fontSize: 14, fontStyle: "italic", color: "var(--muted)" }}
+            >
+              Stay a little longer
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ══ 悬浮输入栏 ══ */}
+      {/* ══ 悬浮输入栏:以带入角色的视角发言 ══ */}
       <div
         style={{
           position: "absolute",
@@ -259,7 +340,7 @@ export default function F4Sandplay({
           right: 0,
           bottom: 0,
           padding: "26px 16px 26px",
-          background: "linear-gradient(0deg, rgba(246,241,228,0.9) 30%, rgba(246,241,228,0) 100%)",
+          background: "linear-gradient(0deg, rgba(255,249,238,0.9) 30%, rgba(255,249,238,0) 100%)",
           zIndex: 11,
         }}
       >
@@ -273,7 +354,7 @@ export default function F4Sandplay({
             borderRadius: 26,
             background: "rgba(255,255,255,0.86)",
             backdropFilter: "blur(10px)",
-            border: "1px solid rgba(230,225,216,0.8)",
+            border: "1px solid rgba(169,212,226,0.55)",
             boxShadow: "var(--shadow-input)",
           }}
         >
@@ -295,7 +376,7 @@ export default function F4Sandplay({
           />
           <button onClick={send} aria-label="Send" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, flexShrink: 0 }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "var(--accent)" }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FAF8F3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" />
               </svg>
             </span>
@@ -306,22 +387,21 @@ export default function F4Sandplay({
   );
 }
 
-/* 弹幕气泡:半透明磨砂 chip,盖在画面上 */
+/* 弹幕气泡:半透明磨砂 chip,盖在画面上;发言人 = 故事人设 */
 function DanmakuBubble({
-  speakerId,
+  speaker,
   text,
   streamingText,
   onStreamDone,
 }: {
-  speakerId: FaceId;
+  speaker?: Persona;
   text?: string;
   streamingText?: string;
   onStreamDone?: () => void;
 }) {
-  const c = characterById(speakerId);
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
-      <ChatAvatar speakerId={speakerId} />
+      <PersonaAvatar speaker={speaker} size={34} />
       <div
         style={{
           maxWidth: "80%",
@@ -329,14 +409,73 @@ function DanmakuBubble({
           borderRadius: "4px 15px 15px 15px",
           background: "rgba(255,255,255,0.82)",
           backdropFilter: "blur(8px)",
-          border: "1px solid rgba(234,229,216,0.7)",
+          border: "1px solid rgba(217,238,244,0.9)",
         }}
       >
-        <span style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--readable)", marginRight: 6 }}>{c.name}</span>
+        <span style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--readable)", marginRight: 6 }}>
+          {speaker?.name ?? "…"}
+        </span>
         <span style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5 }}>
           {streamingText != null ? <TypeText text={streamingText} speed={26} onDone={onStreamDone} /> : text}
         </span>
       </div>
     </div>
+  );
+}
+
+/* typing 预告:头像 + 三点律动 */
+function PersonaTyping({ speaker }: { speaker?: Persona }) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "flex-start", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
+      <PersonaAvatar speaker={speaker} size={34} />
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "13px 15px",
+          borderRadius: "4px 15px 15px 15px",
+          background: "rgba(255,255,255,0.82)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(217,238,244,0.9)",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              display: "block",
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "#9FC3D4",
+              animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* 人设圆形头像(裁脸) */
+function PersonaAvatar({ speaker, size }: { speaker?: Persona; size: number }) {
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: "#EAF6FA",
+        flexShrink: 0,
+        overflow: "hidden",
+        display: "block",
+      }}
+    >
+      {speaker && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={speaker.avatar} alt={speaker.name} style={{ width: size, height: size, objectFit: "cover", objectPosition: "50% 12%" }} />
+      )}
+    </span>
   );
 }

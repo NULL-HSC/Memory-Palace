@@ -1,126 +1,196 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CharacterFace, type FaceId } from "../characters";
+import type { Persona } from "@/lib/types";
 
 /**
- * F4 舞台 v2 —— 竖屏全幅 AIGC video 槽位（互动影游形态）
- * 舞台铺满全屏作为对话发生的"世界";对话以直播弹幕式浮层盖在上面(见 F4Sandplay)。
- * 仍是槽位:入场 shimmer 兜底(永不黑屏),真视频就绪后同槽位 crossfade 接入;
- * 说话者焦点联动(RPG staging rule:step-forward + 提亮,其余退后变暗)。
+ * F4 舞台 v3 —— 竖屏全幅 AIGC video 槽位（直播间形态）
+ * - 视频未就绪:友好加载态(呼吸光晕 + "staging the scene…" 提示),对话流照常盖在上面
+ * - 就绪后:场景静帧(占位)crossfade 600ms 进场;真视频同槽位替换
+ *   TODO(联调): 按契约轮询 GET /api/video-tasks/{task_id},succeeded 后接 playback URL
+ * - 台上角色 = 故事 Top 3 人设;说话者 step-forward + 提亮,其余退后变暗
  */
 
 interface Props {
-  speakerId: FaceId | null;
+  cast: Persona[]; // 故事 Top 3(含用户带入的那位)
+  speakerId: string | null; // 当前发言的 persona id
   title?: string;
 }
 
-/** 角色站位:舞台中部偏上(弹幕浮层之上),中置主角 + 两翼 */
-const FIGURES: Array<{ id: FaceId; style: React.CSSProperties; size: number; delay: string }> = [
-  { id: "mira", size: 74, delay: "0.9s", style: { left: "14%", bottom: "41%" } },
-  { id: "pico", size: 128, delay: "0s", style: { left: "50%", marginLeft: -64, bottom: "38%" } },
-  { id: "renn", size: 70, delay: "1.8s", style: { right: "14%", bottom: "41%" } },
+/** 站位:舞台中部偏上(弹幕浮层之上),中置主角 + 两翼 */
+const SLOTS: Array<{ style: React.CSSProperties; size: number; delay: string }> = [
+  { size: 74, delay: "0.9s", style: { left: "14%", bottom: "41%" } },
+  { size: 128, delay: "0s", style: { left: "50%", marginLeft: -64, bottom: "38%" } },
+  { size: 70, delay: "1.8s", style: { right: "14%", bottom: "41%" } },
 ];
 
-export default function SandplayStage({ speakerId, title }: Props) {
+const MOCK_VIDEO_MS = 8000; // mock:VLM 生成 10s 视频的等待时长
+
+export default function SandplayStage({ cast, speakerId, title }: Props) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 1400);
+    const t = setTimeout(() => setReady(true), MOCK_VIDEO_MS);
     return () => clearTimeout(t);
   }, []);
 
   return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#F1E9D6" }}>
-      {/* 场景(占位静帧 · 后续换 AIGC 视频):黄昏暖野,前中远景三层 */}
-      <svg
-        viewBox="0 0 390 844"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        aria-hidden
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#EAF6FA" }}>
+      {/* ══ 场景(占位静帧 · 后续换 AIGC 视频):就绪后 crossfade 进场 ══ */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          opacity: ready ? 1 : 0,
+          transition: "opacity 600ms var(--ease-soft)",
+        }}
       >
-        <defs>
-          <linearGradient id="skyV" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F6F1E4" />
-            <stop offset="45%" stopColor="#F1E8D2" />
-            <stop offset="100%" stopColor="#E9DDBE" />
-          </linearGradient>
-          <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stopColor="#EFDFB4" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#EFDFB4" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <rect width="390" height="844" fill="url(#skyV)" />
-        {/* 低垂暖阳 */}
-        <circle cx="312" cy="168" r="86" fill="url(#sunGlow)" />
-        <circle cx="312" cy="168" r="34" fill="#F0E3C0" opacity="0.9" />
-        {/* 远景山脊 */}
-        <path d="M0 420 Q80 372 170 404 T390 388 V844 H0 Z" fill="#E3D8BA" opacity="0.8" />
-        <path d="M0 470 Q110 430 220 458 T390 446 V844 H0 Z" fill="#DDD2B2" opacity="0.9" />
-        {/* 中景灌木剪影 */}
-        <path d="M-20 560 Q30 500 76 548 Q104 520 128 556 Q160 536 168 580 L168 640 L-20 640 Z" fill="#C9CFB0" opacity="0.75" />
-        <path d="M410 552 Q356 496 316 550 Q288 524 268 560 Q238 542 232 584 L232 640 L410 640 Z" fill="#C9CFB0" opacity="0.75" />
-        {/* 近景地面与沙丘 */}
-        <path d="M0 600 Q120 560 230 592 T390 584 V844 H0 Z" fill="var(--sand-2)" />
-        <ellipse cx="195" cy="760" rx="230" ry="72" fill="#E7DBBD" opacity="0.85" />
-        <ellipse cx="195" cy="700" rx="90" ry="18" fill="#E0D2AF" opacity="0.8" />
-      </svg>
-
-      {/* 萤火/光尘:环境微动,低对比不抢注意力 */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <span
-          key={i}
+        <svg
+          viewBox="0 0 390 844"
+          preserveAspectRatio="xMidYMid slice"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
           aria-hidden
-          style={{
-            position: "absolute",
-            left: `${16 + i * 17}%`,
-            top: `${34 + (i % 3) * 12}%`,
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "#E8D9A8",
-            animation: `think ${3.2 + i * 0.7}s ease-in-out ${i * 0.9}s infinite`,
-          }}
-        />
-      ))}
+        >
+          <defs>
+            <linearGradient id="skyV" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FFF9EE" />
+              <stop offset="45%" stopColor="#D9EEF4" />
+              <stop offset="100%" stopColor="#AEE0EF" />
+            </linearGradient>
+            <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0%" stopColor="#FFD86A" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="#FFD86A" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <rect width="390" height="844" fill="url(#skyV)" />
+          {/* 低垂暖阳 */}
+          <circle cx="312" cy="168" r="86" fill="url(#sunGlow)" />
+          <circle cx="312" cy="168" r="34" fill="#FFE49A" opacity="0.9" />
+          {/* 远景山脊 */}
+          <path d="M0 420 Q80 372 170 404 T390 388 V844 H0 Z" fill="#C2E4EE" opacity="0.8" />
+          <path d="M0 470 Q110 430 220 458 T390 446 V844 H0 Z" fill="#A9D4E2" opacity="0.9" />
+          {/* 中景灌木剪影 */}
+          <path d="M-20 560 Q30 500 76 548 Q104 520 128 556 Q160 536 168 580 L168 640 L-20 640 Z" fill="#8ED4E8" opacity="0.75" />
+          <path d="M410 552 Q356 496 316 550 Q288 524 268 560 Q238 542 232 584 L232 640 L410 640 Z" fill="#8ED4E8" opacity="0.75" />
+          {/* 近景地面与沙丘 */}
+          <path d="M0 600 Q120 560 230 592 T390 584 V844 H0 Z" fill="var(--sand-2)" />
+          <ellipse cx="195" cy="760" rx="230" ry="72" fill="#EAF6FA" opacity="0.85" />
+          <ellipse cx="195" cy="700" rx="90" ry="18" fill="#D9EEF4" opacity="0.8" />
+        </svg>
 
-      {/* 角色:sway 常驻;说话者 step-forward + 提亮 */}
-      {FIGURES.map(({ id, style, size, delay }) => {
-        const focused = speakerId === id;
-        return (
-          <div
-            key={id}
+        {/* 萤火/光尘:环境微动,低对比不抢注意力 */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <span
+            key={i}
+            aria-hidden
             style={{
               position: "absolute",
-              ...style,
-              transition: "transform 450ms var(--ease-soft), opacity 450ms, filter 450ms",
-              transform: focused ? "translateY(-12px) scale(1.15)" : "none",
-              opacity: speakerId && !focused ? 0.68 : id === "pico" ? 1 : 0.94,
-              filter: speakerId && !focused ? "saturate(0.75) brightness(0.97)" : "none",
-              zIndex: focused ? 3 : 2,
+              left: `${16 + i * 17}%`,
+              top: `${34 + (i % 3) * 12}%`,
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "#FFD86A",
+              animation: `think ${3.2 + i * 0.7}s ease-in-out ${i * 0.9}s infinite`,
+            }}
+          />
+        ))}
+
+        {/* 台上角色 = 故事 Top 3:sway 常驻;说话者 step-forward + 提亮 */}
+        {cast.slice(0, 3).map((p, i) => {
+          const slot = SLOTS[i];
+          if (!slot) return null;
+          const focused = speakerId === p.id;
+          return (
+            <div
+              key={p.id}
+              style={{
+                position: "absolute",
+                ...slot.style,
+                transition: "transform 450ms var(--ease-soft), opacity 450ms, filter 450ms",
+                transform: focused ? "translateY(-12px) scale(1.15)" : "none",
+                opacity: speakerId && !focused ? 0.68 : i === 1 ? 1 : 0.94,
+                filter: speakerId && !focused ? "saturate(0.75) brightness(0.97)" : "none",
+                zIndex: focused ? 3 : 2,
+              }}
+            >
+              <div className="anim-sway" style={{ animationDelay: slot.delay }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.avatar}
+                  alt={p.name}
+                  style={{ width: slot.size, height: slot.size * 1.12, objectFit: "contain", display: "block" }}
+                />
+              </div>
+              {focused && (
+                <div
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: slot.size * 1.6,
+                    height: slot.size * 1.6,
+                    borderRadius: "50%",
+                    background: "radial-gradient(circle, rgba(246,241,228,0.55) 0%, transparent 65%)",
+                    zIndex: -1,
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ══ 演绎中加载态:AIGC 视频未就绪时的兜底(永不黑屏) ══ */}
+      {!ready && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(170deg, #FFF9EE, #D9EEF4)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            zIndex: 2,
+          }}
+        >
+          {/* 呼吸光晕 + 三点律动,友好等待感 */}
+          <div
+            aria-hidden
+            style={{
+              width: 92,
+              height: 92,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(255,216,106,0.85) 0%, rgba(255,216,106,0) 70%)",
+              animation: "think 2.6s ease-in-out infinite",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
             }}
           >
-            <div className="anim-sway" style={{ animationDelay: delay }}>
-              <CharacterFace id={id} size={size} />
-            </div>
-            {focused && (
-              <div
-                aria-hidden
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
                 style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: size * 1.6,
-                  height: size * 1.6,
+                  display: "block",
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
-                  background: "radial-gradient(circle, rgba(246,241,228,0.55) 0%, transparent 65%)",
-                  zIndex: -1,
+                  background: "#7FA9BE",
+                  animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
                 }}
               />
-            )}
+            ))}
           </div>
-        );
-      })}
+          <span className="meta-italic" style={{ color: "#4E86A6", fontSize: 13.5 }}>
+            staging the scene…
+          </span>
+        </div>
+      )}
 
       {/* 故事名:舞台左上小签 */}
       {title && (
@@ -131,35 +201,16 @@ export default function SandplayStage({ speakerId, title }: Props) {
             top: 100,
             padding: "5px 12px",
             borderRadius: 999,
-            background: "rgba(250,248,243,0.72)",
+            background: "rgba(255,255,255,0.72)",
             backdropFilter: "blur(6px)",
             fontSize: 12,
             fontStyle: "italic",
-            color: "#8A7B5C",
+            color: "#4E86A6",
             zIndex: 4,
           }}
         >
           {title}
         </span>
-      )}
-
-      {/* shimmer:场景“生成中”兜底(永不黑屏) */}
-      {!ready && (
-        <div
-          className="shimmer"
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(170deg, #F4EEDA, #EBDFC2)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 6,
-          }}
-        >
-          <span className="meta-italic" style={{ color: "#A99873" }}>
-            laying out the day…
-          </span>
-        </div>
       )}
     </div>
   );

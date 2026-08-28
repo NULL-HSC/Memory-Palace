@@ -10,24 +10,30 @@ import { getPersonas } from "@/lib/api";
  * 然后才进直播间(板块二)。提取期间展示友好的加载态。
  */
 export default function PickRole({
+  transcript,
   onBack,
   onPick,
 }: {
+  transcript: string; // 用户转写文本,LLM 从中提取 Top 3 人设
   onBack: () => void;
-  onPick: (persona: Persona) => void;
+  onPick: (persona: Persona, cast: Persona[]) => void; // 带入者 + 完整 Top 3 阵容
 }) {
   const [personas, setPersonas] = useState<Persona[] | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false); // LLM 提取失败(全真实模式:不塞 mock,给重试)
+
+  const load = () => {
+    setFailed(false);
+    setPersonas(null);
+    getPersonas(transcript)
+      .then((ps) => setPersonas(ps))
+      .catch(() => setFailed(true));
+  };
 
   useEffect(() => {
-    let alive = true;
-    getPersonas()
-      .then((ps) => alive && setPersonas(ps))
-      .catch(() => alive && setPersonas([]));
-    return () => {
-      alive = false;
-    };
-  }, []);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcript]);
 
   const chosen = personas?.find((p) => p.id === picked) ?? null;
 
@@ -52,12 +58,33 @@ export default function PickRole({
         </div>
       </div>
 
-      {/* 人设卡列表 / 提取中加载态 */}
+      {/* 人设卡列表 / 提取中加载态 / 失败重试 */}
       <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 12, flexShrink: 0 }}>
-        {personas === null ? (
+        {failed ? (
+          <div style={{ textAlign: "center", padding: "26px 0" }}>
+            <div className="meta-italic" style={{ fontSize: 13.5 }}>
+              Couldn&rsquo;t read the story just now.
+            </div>
+            <button
+              onClick={load}
+              style={{
+                marginTop: 14,
+                height: 44,
+                padding: "0 22px",
+                borderRadius: 22,
+                border: "1px solid var(--line)",
+                background: "#FFFFFF",
+                fontSize: 14.5,
+                color: "var(--ink)",
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : personas === null ? (
           <>
             {[0, 1, 2].map((i) => (
-              <div key={i} className="shimmer" style={{ height: 76, borderRadius: 16, background: "rgba(169,162,146,0.14)" }} />
+              <div key={i} className="shimmer" style={{ height: 76, borderRadius: 16, background: "rgba(159,195,212,0.22)" }} />
             ))}
             <div style={{ textAlign: "center", marginTop: 8 }}>
               <span className="meta-italic" style={{ fontSize: 13 }}>reading your story…</span>
@@ -77,7 +104,7 @@ export default function PickRole({
                   padding: "14px 16px",
                   borderRadius: 16,
                   border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(92,107,74,0.08)" : "#FFFFFF",
+                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "left",
@@ -89,7 +116,7 @@ export default function PickRole({
                     width: 48,
                     height: 48,
                     borderRadius: "50%",
-                    background: "#F0EBDD",
+                    background: "#EAF6FA",
                     overflow: "hidden",
                     flexShrink: 0,
                     display: "block",
@@ -115,7 +142,7 @@ export default function PickRole({
       {/* CTA:选完才可进入直播间 */}
       <div style={{ flex: 1 }} />
       <button
-        onClick={() => chosen && onPick(chosen)}
+        onClick={() => chosen && onPick(chosen, personas ?? [])}
         disabled={!chosen}
         style={{
           display: "flex",
