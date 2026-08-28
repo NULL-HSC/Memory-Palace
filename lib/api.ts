@@ -2,76 +2,255 @@ import type { DialogueTurn, Persona, SpeakerTurn, Story } from "./types";
 import { pickMockTitle } from "./mock/titles";
 
 /**
- * 统一请求封装 —— 所有页面只准从这里发请求（hackathon-plan §4.3）
- *
- * Mock 开关：未配置 NEXT_PUBLIC_BACKEND_URL 时走本地 mock（§4.4）。
- * 后端好了：.env.local 填入 BACKEND_URL / NEXT_PUBLIC_BACKEND_URL，逐条把
- * 下面的 mock 分支换成真接口即可。
- *
- * TODO(Capacitor iOS 打包时): `npm i @capacitor/core`，并在下方加原生分支 —
- *   if (Capacitor.isNativePlatform()) { 用 CapacitorHttp 直连 NEXT_PUBLIC_BACKEND_URL }
+ * 前端统一 API 层。浏览器只访问同源 /api/*，Next.js 代理到 BACKEND_URL。
+ * NEXT_PUBLIC_BACKEND_URL 仅用于标记启用真后端（后续 iOS 原生直连也会用到）。
  */
 
-const USE_MOCK = !process.env.NEXT_PUBLIC_BACKEND_URL;
+export const USE_BACKEND =
+  process.env.NEXT_PUBLIC_USE_BACKEND === "true" || Boolean(process.env.NEXT_PUBLIC_BACKEND_URL);
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const ACCESS_TOKEN_KEY = "sheniceset_access_token";
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function api<T = unknown>(
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: number
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export interface ApiEnvelope<T> {
+  code: number;
+  data: T | null;
+  message: string;
+}
+
+export interface UserResponse {
+  id: string;
+  phone: string;
+  username: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: UserResponse;
+}
+
+export interface BackendSessionSummary {
+  id: string;
+  final_text_preview: string;
+  visibility: string;
+  video_status: string;
+  created_at: string;
+}
+
+export interface VideoDetail {
+  id: string;
+  status: string;
+  duration_seconds?: number | null;
+  cover_url?: string | null;
+  error_code?: string | null;
+  message?: string | null;
+}
+
+export interface SessionStatus {
+  id: string;
+  final_text: string;
+  visibility: string;
+  persona_status: string;
+  video: VideoDetail;
+  created_at: string;
+}
+
+export interface CreateSessionResponse {
+  session_id: string;
+  video_task_id: string;
+  persona_status: string;
+  visibility: string;
+  status: string;
+}
+
+export interface BackendMessage {
+  id: string;
+  sender_type: string;
+  sender_id: string;
+  author_type: string;
+  content: string;
+  created_at: string;
+}
+
+export interface PageResult<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface ReplyRunCreated {
+  reply_run_id: string;
+  status: string;
+  message_id?: string;
+}
+
+export interface PreparedSandplay {
+  personas: Persona[];
+  session?: CreateSessionResponse;
+}
+
+function getAccessToken(): string | null {
+  if (typeof window !== "undefined") {
+    const stored = window.localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (stored) return stored;
+  }
+  return process.env.NEXT_PUBLIC_BACKEND_ACCESS_TOKEN || null;
+}
+
+export function setAccessToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  else window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+}
+
+function authHeaders(): HeadersInit {
+  const token = getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function readError(res: Response): Promise<ApiError> {
+  const payload = (await res.json().catch(() => null)) as
+    | { code?: number; message?: string; detail?: unknown }
+    | null;
+  const detail = Array.isArray(payload?.detail) ? "请求参数不合法" : undefined;
+  return new ApiError(payload?.message || detail || `请求失败 ${res.status}`, res.status, payload?.code);
+}
+
+async function requestEnvelope<T>(
+  path: string,
+  options: { method?: string; body?: unknown; headers?: HeadersInit } = {}
+): Promise<T> {
+  const headers = new Headers(authHeaders());
+  if (options.body !== undefined) headers.set("Content-Type", "application/json");
+  new Headers(options.headers).forEach((value, key) => headers.set(key, value));
+  const res = await fetch(`/api${path}`, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    cache: "no-store",
+  });
+  if (!res.ok) throw await readError(res);
+  const envelope = (await res.json()) as ApiEnvelope<T>;
+  if (typeof envelope?.code !== "number") {
+    throw new ApiError("后端响应缺少 code/data/message 信封", res.status);
+  }
+  if (envelope.code !== 0 || envelope.data == null) {
+    throw new ApiError(envelope.message || "后端返回失败", res.status, envelope.code);
+  }
+  return envelope.data;
+}
+
+async function requestEmptyEnvelope(
   path: string,
   options: { method?: string; body?: unknown } = {}
-): Promise<T> {
-  const method = options.method ?? "GET";
+): Promise<void> {
+  const headers = new Headers(authHeaders());
+  if (options.body !== undefined) headers.set("Content-Type", "application/json");
   const res = await fetch(`/api${path}`, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    method: options.method ?? "GET",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    cache: "no-store",
   });
-  if (!res.ok) throw new Error(`请求失败 ${res.status}`);
-  return res.json() as Promise<T>;
+  if (!res.ok) throw await readError(res);
+  const envelope = (await res.json()) as ApiEnvelope<null>;
+  if (envelope.code !== 0) throw new ApiError(envelope.message || "后端返回失败", res.status, envelope.code);
 }
 
-/* ---------------- 故事（契约: GET /stories · POST /stories） ---------------- */
+/* ── 认证 ── */
 
-export async function createStory(input: {
-  title: string;
-  transcript: string;
-  cover: string;
-  reflection?: string;
-}): Promise<Pick<Story, "id">> {
-  if (USE_MOCK) {
-    await delay(300);
-    return { id: `story-${Date.now()}` };
-  }
-  return api("/stories", { method: "POST", body: input });
+export const requestVerificationCode = (phone: string) =>
+  requestEnvelope<{ verification_code: string | null; expires_in_seconds: number }>(
+    "/auth/verification-codes",
+    { method: "POST", body: { phone } }
+  );
+
+export async function register(input: {
+  phone: string;
+  verification_code: string;
+  username: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const auth = await requestEnvelope<AuthResponse>("/auth/register", { method: "POST", body: input });
+  setAccessToken(auth.access_token);
+  return auth;
 }
 
-/* ---------------- F3 标题建议（契约: POST /ai/title {transcript} → {title}） ---------------- */
-
-export async function suggestTitle(transcript: string): Promise<string> {
-  if (USE_MOCK) {
-    await delay(900 + Math.random() * 500); // 模拟 LLM 延迟
-    return pickMockTitle(transcript);
-  }
-  const res = await api<{ title: string }>("/ai/title", {
+export async function login(phone: string, password: string): Promise<AuthResponse> {
+  const auth = await requestEnvelope<AuthResponse>("/auth/login", {
     method: "POST",
-    body: { transcript },
+    body: { phone, password },
   });
-  return res.title;
+  setAccessToken(auth.access_token);
+  return auth;
 }
 
-/* ---------------- AIGC:人设提取 + 群聊发言(全真实 LLM,无 mock 兜底) ----------------
- *  服务端路由 /api/llm/*(key 只在服务端,第 i 个角色用第 i 个 key;轮内串行互相可见)。
- *  失败即抛错,由调用方决定重试/提示 —— 演示期要看到 LLM 的真实行为。
- *  契约对应:GET /api/sessions/{id}/personas、POST /reply-runs → SSE role.delta(后端就绪后替换)。 */
-
-export interface ChatCtx {
-  transcript: string;
-  cast: Persona[];
-  history?: DialogueTurn[]; // 群聊近期对话
-  userName?: string; // 用户带入角色的名字(invite/answer 模式点名用)
+export async function logout(): Promise<void> {
+  await requestEmptyEnvelope("/auth/logout", { method: "POST" });
+  setAccessToken(null);
 }
 
-/** 真人设头像:LLM 只产出名字/人设;"我"用 companion 图,其余从占位池按序分配(正式美术由服务端 avatar_url 替换) */
+/* ── 转写与会话 ── */
+
+export async function transcribeAudio(audio: Blob, filename = "recording.webm"): Promise<string> {
+  const form = new FormData();
+  form.append("audio", audio, filename);
+  const res = await fetch("/api/transcriptions", {
+    method: "POST",
+    headers: authHeaders(),
+    body: form,
+  });
+  if (!res.ok) throw await readError(res);
+  const envelope = (await res.json()) as ApiEnvelope<{ transcript: string }>;
+  if (envelope.code !== 0 || !envelope.data) {
+    throw new ApiError(envelope.message || "转写失败", res.status, envelope.code);
+  }
+  return envelope.data.transcript;
+}
+
+export const createSession = (finalText: string) =>
+  requestEnvelope<CreateSessionResponse>("/sessions", {
+    method: "POST",
+    body: { final_text: finalText },
+  });
+
+export const listSessions = (page = 1, limit = 20) =>
+  requestEnvelope<PageResult<BackendSessionSummary>>(`/sessions?page=${page}&limit=${limit}`);
+
+export const getSessionStatus = (sessionId: string) =>
+  requestEnvelope<SessionStatus>(`/sessions/${encodeURIComponent(sessionId)}`);
+
+export const deleteSession = (sessionId: string) =>
+  requestEmptyEnvelope(`/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+
+export const updateSessionVisibility = (sessionId: string, visibility: "private" | "public") =>
+  requestEmptyEnvelope(`/sessions/${encodeURIComponent(sessionId)}/visibility`, {
+    method: "PATCH",
+    body: { visibility },
+  });
+
+interface BackendPersona {
+  id: string;
+  name: string;
+  kind: string;
+  profile: string;
+  avatar_url?: string | null;
+}
+
 const ME_AVATAR = "/avatars/avatar.png";
 const AVATAR_POOL = [
   "/avatars/av-bear.png",
@@ -82,40 +261,254 @@ const AVATAR_POOL = [
   "/avatars/av-dog.png",
 ];
 
-/** 调服务端 LLM 路由;非 2xx 一律抛错(不再静默回退 mock) */
-async function llm<T>(path: string, body: unknown): Promise<T> {
+const mapPersonas = (items: BackendPersona[]): Persona[] =>
+  items.slice(0, 3).map((persona, index) => ({
+    id: persona.id,
+    name: persona.name,
+    profile: persona.profile,
+    avatar: persona.avatar_url || (index === 0 ? ME_AVATAR : AVATAR_POOL[(index - 1) % AVATAR_POOL.length]),
+  }));
+
+export async function getSessionPersonas(sessionId: string): Promise<Persona[]> {
+  const data = await requestEnvelope<{ items: BackendPersona[] }>(
+    `/sessions/${encodeURIComponent(sessionId)}/personas`
+  );
+  return mapPersonas(data.items);
+}
+
+/** 会话创建后人设是异步产物；按会话状态轻量等待，不轮询 reply-run。 */
+async function waitForPersonas(sessionId: string): Promise<Persona[]> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const personas = await getSessionPersonas(sessionId);
+      if (personas.length > 0) return personas;
+    } catch (error) {
+      if (error instanceof ApiError && ![404, 409, 425].includes(error.status)) throw error;
+    }
+    const status = await getSessionStatus(sessionId);
+    if (["failed", "error"].includes(status.persona_status.toLowerCase())) {
+      throw new ApiError("后端人设提取失败", 502);
+    }
+    await delay(1500);
+  }
+  throw new ApiError("等待人设提取超时", 504);
+}
+
+/* ── 本地 LLM 降级（未配置真后端时） ── */
+
+async function localLlm<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(err?.message ?? `LLM 请求失败 ${res.status}`);
+    const error = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(error?.message ?? `LLM 请求失败 ${res.status}`);
   }
   return (await res.json()) as T;
 }
 
-export async function getPersonas(transcript: string): Promise<Persona[]> {
-  const real = await llm<{ personas: Array<{ id: string; name: string; profile: string; isUser?: boolean }> }>(
-    "/api/llm/personas",
-    { transcript }
-  );
-  if (real.personas.length === 0) throw new Error("LLM 未提取到人设");
-  let pool = 0;
-  return real.personas.map((p) => ({
-    id: p.id,
-    name: p.name,
-    profile: p.profile,
-    avatar: p.isUser ? ME_AVATAR : AVATAR_POOL[pool++ % AVATAR_POOL.length],
+async function getLocalPersonas(transcript: string): Promise<Persona[]> {
+  const result = await localLlm<{
+    personas: Array<{ id: string; name: string; profile: string; isUser?: boolean }>;
+  }>("/api/llm/personas", { transcript });
+  if (result.personas.length === 0) throw new Error("LLM 未提取到人设");
+  let poolIndex = 0;
+  return result.personas.map((persona) => ({
+    id: persona.id,
+    name: persona.name,
+    profile: persona.profile,
+    avatar: persona.isUser ? ME_AVATAR : AVATAR_POOL[poolIndex++ % AVATAR_POOL.length],
   }));
+}
+
+export async function prepareSandplay(transcript: string): Promise<PreparedSandplay> {
+  if (!USE_BACKEND) return { personas: await getLocalPersonas(transcript) };
+  const session = await createSession(transcript);
+  const personas = await waitForPersonas(session.session_id);
+  return { personas, session };
+}
+
+/* ── 消息、reply-run 与 SSE ── */
+
+export const listMessages = (sessionId: string, page = 1, limit = 50) =>
+  requestEnvelope<PageResult<BackendMessage>>(
+    `/sessions/${encodeURIComponent(sessionId)}/messages?page=${page}&limit=${limit}`
+  );
+
+export const sendSessionMessage = (sessionId: string, personaId: string, content: string) =>
+  requestEnvelope<ReplyRunCreated>(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
+    method: "POST",
+    body: { persona_id: personaId, content },
+  });
+
+export const startReplyRun = (sessionId: string, personaId: string) =>
+  requestEnvelope<ReplyRunCreated>(`/sessions/${encodeURIComponent(sessionId)}/reply-runs`, {
+    method: "POST",
+    body: { persona_id: personaId },
+  });
+
+export const cancelReplyRun = (replyRunId: string) =>
+  requestEmptyEnvelope(`/reply-runs/${encodeURIComponent(replyRunId)}/cancel`, { method: "POST" });
+
+interface ParsedSseEvent {
+  event: string;
+  id?: string;
+  data: unknown;
+}
+
+function parseSseBlock(block: string): ParsedSseEvent | null {
+  let event = "message";
+  let id: string | undefined;
+  const data: string[] = [];
+  for (const line of block.split(/\r?\n/)) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("id:")) id = line.slice(3).trim();
+    else if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
+  }
+  if (data.length === 0) return null;
+  const raw = data.join("\n");
+  try {
+    return { event, id, data: JSON.parse(raw) };
+  } catch {
+    return { event, id, data: raw };
+  }
+}
+
+const stringField = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length > 0 ? value : undefined;
+
+/**
+ * 先打开 SSE，再启动 reply-run，避免极快的首个 delta 丢失。
+ * role.delta 必须按 message_id 分桶，因为多角色 delta 可能交错到达。
+ */
+async function collectReplyRun(
+  sessionId: string,
+  start: () => Promise<ReplyRunCreated>
+): Promise<SpeakerTurn[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
+  const headers = new Headers(authHeaders());
+  headers.set("Accept", "text/event-stream");
+  const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/events`, {
+    headers,
+    signal: controller.signal,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    clearTimeout(timeout);
+    throw await readError(response);
+  }
+  if (!response.body) {
+    clearTimeout(timeout);
+    throw new ApiError("SSE 响应没有可读流", 502);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+  const byMessage = new Map<string, { speakerId: string; text: string }>();
+  const finished = new Map<string, SpeakerTurn>();
+
+  try {
+    const run = await start();
+    while (true) {
+      const { value, done } = await reader.read();
+      pending += decoder.decode(value, { stream: !done });
+      const blocks = pending.split(/\r?\n\r?\n/);
+      pending = blocks.pop() ?? "";
+      for (const block of blocks) {
+        const parsed = parseSseBlock(block);
+        if (!parsed) continue;
+        const payload = parsed.data && typeof parsed.data === "object"
+          ? (parsed.data as Record<string, unknown>)
+          : { data: parsed.data };
+        const nested = payload.data && typeof payload.data === "object"
+          ? (payload.data as Record<string, unknown>)
+          : payload;
+        const eventName = (stringField(payload.type) || stringField(payload.event) || parsed.event).toLowerCase();
+        const eventRunId = stringField(nested.reply_run_id) || stringField(payload.reply_run_id);
+        if (eventRunId && eventRunId !== run.reply_run_id) continue;
+
+        if (eventName.includes("error") || eventName.includes("failed")) {
+          throw new ApiError(
+            stringField(nested.message) || stringField(payload.message) || "reply-run 执行失败",
+            502
+          );
+        }
+
+        const messageId =
+          stringField(nested.message_id) || stringField(payload.message_id) || stringField(parsed.id);
+        const speakerId =
+          stringField(nested.persona_id) ||
+          stringField(nested.sender_id) ||
+          stringField(nested.role_id) ||
+          stringField(payload.persona_id);
+        const delta =
+          stringField(nested.delta) ||
+          stringField(nested.text_delta) ||
+          stringField(nested.content_delta);
+        const fullText = stringField(nested.content) || stringField(nested.text);
+
+        if (messageId && (delta || fullText)) {
+          const current = byMessage.get(messageId) ?? { speakerId: speakerId || "unknown", text: "" };
+          if (speakerId) current.speakerId = speakerId;
+          current.text = fullText || `${current.text}${delta || ""}`;
+          byMessage.set(messageId, current);
+        }
+
+        if (messageId && (eventName.includes("message.completed") || eventName.includes("role.completed"))) {
+          const current = byMessage.get(messageId);
+          if (current?.text) finished.set(messageId, { speakerId: current.speakerId, text: current.text });
+        }
+
+        if (
+          eventName.includes("reply_run.completed") ||
+          eventName.includes("reply-run.completed") ||
+          eventName === "run.completed" ||
+          eventName === "reply.completed"
+        ) {
+          byMessage.forEach((current, messageIdKey) => {
+            if (current.text && !finished.has(messageIdKey)) {
+              finished.set(messageIdKey, { speakerId: current.speakerId, text: current.text });
+            }
+          });
+          return Array.from(finished.values());
+        }
+      }
+      if (done) break;
+    }
+    return Array.from(finished.values());
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+    reader.releaseLock();
+  }
+}
+
+export interface ChatCtx {
+  transcript: string;
+  cast: Persona[];
+  history?: DialogueTurn[];
+  userName?: string;
+  sessionId?: string;
+  userPersonaId?: string;
+  userMessage?: string;
 }
 
 export type TurnMode = "opening" | "continue" | "invite" | "answer";
 
-/** 群聊一轮发言;continue 轮允许全员沉默(返回空数组) */
 export async function runTurn(mode: TurnMode, speakers: string[], ctx: ChatCtx): Promise<SpeakerTurn[]> {
-  const real = await llm<{ turns: SpeakerTurn[] }>("/api/llm/turn", {
+  if (USE_BACKEND && ctx.sessionId && ctx.userPersonaId) {
+    return collectReplyRun(ctx.sessionId, () =>
+      mode === "answer" && ctx.userMessage
+        ? sendSessionMessage(ctx.sessionId!, ctx.userPersonaId!, ctx.userMessage)
+        : startReplyRun(ctx.sessionId!, ctx.userPersonaId!)
+    );
+  }
+
+  const result = await localLlm<{ turns: SpeakerTurn[] }>("/api/llm/turn", {
     transcript: ctx.transcript,
     personas: ctx.cast,
     speakers,
@@ -123,9 +516,37 @@ export async function runTurn(mode: TurnMode, speakers: string[], ctx: ChatCtx):
     history: ctx.history ?? [],
     userName: ctx.userName,
   });
-  return real.turns;
+  return result.turns;
 }
 
-/* ---------------- 健康检查（契约: GET /health）—— 联调第一个测它 ---------------- */
+/* ── 视频与辅助功能 ── */
 
-export const health = () => api<{ ok: boolean }>("/health");
+export const getPlaybackUrl = async (videoId: string): Promise<string> => {
+  const data = await requestEnvelope<{ playback_url: string }>(
+    `/videos/${encodeURIComponent(videoId)}/playback`
+  );
+  return data.playback_url;
+};
+
+/** 新版后端没有 title 接口，标题建议继续使用稳定的本地池。 */
+export async function suggestTitle(transcript: string): Promise<string> {
+  await delay(500);
+  return pickMockTitle(transcript);
+}
+
+/** @deprecated 真后端以 session 作为故事容器，保留此函数只为兼容旧调用。 */
+export async function createStory(input: {
+  title: string;
+  transcript: string;
+  cover: string;
+  reflection?: string;
+}): Promise<Pick<Story, "id">> {
+  void input;
+  return { id: `story-${Date.now()}` };
+}
+
+export async function health(): Promise<{ status: string }> {
+  const res = await fetch("/api/health", { cache: "no-store" });
+  if (!res.ok) throw await readError(res);
+  return (await res.json()) as { status: string };
+}

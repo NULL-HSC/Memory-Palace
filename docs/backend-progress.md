@@ -7,6 +7,37 @@
 
 ---
 
+## 2026-08-28 OpenAPI 0.1.0 对齐
+
+### 前端已对齐
+
+- 统一解包 `{code,data,message}`，Bearer token 由单一 API 层附加；同源代理现在正确保留后端 `/api` 前缀，`/health` 例外。
+- 新建故事:`POST /api/sessions {final_text}` → 等待 `GET personas` → 选角色。
+- 群聊:`POST messages` / `POST reply-runs` 前先打开 `GET events`；`role.delta` 按 `message_id` 分桶，支持多角色交错 delta。
+- 视频:轮询 `GET /api/sessions/{id}` 的 `video.status`，就绪后用 `video.id` 请求 `GET /api/videos/{video_id}/playback`，并在舞台播放。
+- Keep 时调 `PATCH visibility`。后端只有 `private/public`，前端 `community → public`，`friends → private`。
+- 认证、转写、session 列表/详情/删除、消息列表、取消 reply-run 已在 `lib/api.ts` 建好类型化封装，等对应 UI 直接调用。
+
+### 待后端关注（按优先级）
+
+1. **P0 域名在国内无法直连**:公共 DNS 解析为 `120.53.103.128`，HTTP 被 DNSPod 重定向到备案拦截页；本机代理 DNS 返回 `198.18.0.205` 时，TLS 成功但应用返回 empty response。需处理备案/域名/CDN 或提供可访问的备用 API 域名，否则国内手机与部署机器都无法联调。
+2. **P0 SSE 契约未进 OpenAPI**:`GET events` 当前被写成 `application/json` 空 schema。请明确 `text/event-stream`、心跳、所有 event name，以及 `event_id/reply_run_id/message_id/persona_id/delta`、消息完成、run 完成与失败的完整 JSON 示例。
+3. **P0 `persona_id` 语义需确认**:`SendMessageRequest` 和 `StartReplyRunRequest` 都只写 `persona_id`，但未说它是“用户带入的发言角色”还是“希望回复的目标角色”。前端当前按前者传值。
+4. **P1 状态字段都是无约束 string**:`status/persona_status/video.status/reply-run status/sender_type/author_type/kind`应提供 enum 及转移图，特别是视频成功/失败值和人设未就绪时 `GET personas` 的 HTTP/响应行为。
+5. **P1 视频任务标识有歧义**:`POST sessions` 返回 `video_task_id`，但无 video-task 查询接口；会话详情又返回 `video.id`。请在文档中明确两者关系和官方轮询流程。
+6. **P1 可见性产品不对齐**:后端只允许 `private|public`，前端有 `private|friends|community`。需决定是后端新增 `friends`，还是前端删掉该选项。
+7. **P1 认证缺少生命周期**:OpenAPI 无 token 过期时间、refresh 接口和 401 错误 schema。正式版不应依赖手工注入 access token。
+8. **P1 播放地址约定**:请说明 `playback_url` TTL，并确保对浏览器/iOS 支持 HTTPS、CORS、Range 请求与正确 video Content-Type。
+9. **P2 文档 schema 仍与实测不一致**:OpenAPI 0.1.0 的 422 仍是 FastAPI `{detail:[...]}`，而 2026-08-27 实测为统一信封。请修正 OpenAPI，并补齐 401/403/404/409/429/5xx 的统一错误响应。
+10. **P2 转写约束缺失**:`audio` 只写为 binary，请补支持的 MIME/容器、大小、时长、超时和 413/415 错误。
+
+### 联调说明
+
+- 无后端环境变量时保留本地演示路径。启用真后端需配置 `BACKEND_URL` 和 `NEXT_PUBLIC_BACKEND_URL`，并通过认证 UI 或黑客松短期 `NEXT_PUBLIC_BACKEND_ACCESS_TOKEN` 提供 Bearer token。
+- 因域名当前被拦截，本次只能完成 OpenAPI 契约级对齐，无法对新业务接口做端到端实测。
+
+---
+
 ## 2026-08-27 实测
 
 ### 已上线且实测通过

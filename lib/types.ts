@@ -11,6 +11,10 @@ export interface Story {
   reflection?: string; // F3 可选反思输入
   visibility?: "private" | "friends" | "community"; // Keep 时选择：仅自己 / 朋友 / 公开
   createdAt: number;
+  /** 真后端会话标识；未配置后端的本地演示中为空。 */
+  backendSessionId?: string;
+  /** 创建会话时后端返回的视频生成任务标识。 */
+  backendVideoTaskId?: string;
 }
 
 export interface Character {

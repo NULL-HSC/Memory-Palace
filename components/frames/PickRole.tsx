@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { Persona } from "@/lib/types";
-import { getPersonas } from "@/lib/api";
+import { prepareSandplay, type CreateSessionResponse } from "@/lib/api";
 
 /**
  * 沙盘演绎 · 板块一 —— 选带入角色（docs/product-flow.md F4）
@@ -16,18 +16,22 @@ export default function PickRole({
 }: {
   transcript: string; // 用户转写文本,LLM 从中提取 Top 3 人设
   onBack: () => void;
-  onPick: (persona: Persona, cast: Persona[]) => void; // 带入者 + 完整 Top 3 阵容
+  onPick: (persona: Persona, cast: Persona[], session?: CreateSessionResponse) => void; // 带入者 + 完整 Top 3 阵容
 }) {
   const [personas, setPersonas] = useState<Persona[] | null>(null);
+  const [session, setSession] = useState<CreateSessionResponse | undefined>();
   const [picked, setPicked] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false); // LLM 提取失败(全真实模式:不塞 mock,给重试)
+  const [failed, setFailed] = useState<string | null>(null);
 
   const load = () => {
-    setFailed(false);
+    setFailed(null);
     setPersonas(null);
-    getPersonas(transcript)
-      .then((ps) => setPersonas(ps))
-      .catch(() => setFailed(true));
+    prepareSandplay(transcript)
+      .then((prepared) => {
+        setPersonas(prepared.personas);
+        setSession(prepared.session);
+      })
+      .catch((error) => setFailed(error instanceof Error ? error.message : "Couldn’t prepare the story"));
   };
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export default function PickRole({
         {failed ? (
           <div style={{ textAlign: "center", padding: "26px 0" }}>
             <div className="meta-italic" style={{ fontSize: 13.5 }}>
-              Couldn&rsquo;t read the story just now.
+              {failed}
             </div>
             <button
               onClick={load}
@@ -142,7 +146,7 @@ export default function PickRole({
       {/* CTA:选完才可进入直播间 */}
       <div style={{ flex: 1 }} />
       <button
-        onClick={() => chosen && onPick(chosen, personas ?? [])}
+        onClick={() => chosen && onPick(chosen, personas ?? [], session)}
         disabled={!chosen}
         style={{
           display: "flex",

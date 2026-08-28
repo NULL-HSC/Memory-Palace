@@ -1,4 +1,4 @@
-/** F3 标题建议池 —— mock；真接口为 POST /ai/title（理理理.md §8.2）
+/** F3 标题建议池 —— 新版后端暂无 title 接口，作为稳定降级。
  *  风格：名词短语、有情绪余味、不剧透，参考 "A Day About Courage" */
 
 export const TITLE_POOL = [

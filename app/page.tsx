@@ -11,6 +11,7 @@ import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
+import { updateSessionVisibility } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -87,7 +88,18 @@ function Shell() {
     date: string;
     visibility: "private" | "friends" | "community";
   }) => {
-    addStory(draft);
+    if (pending?.backendSessionId) {
+      // 后端当前只支持 private/public；friends 安全降级为 private，避免误公开。
+      void updateSessionVisibility(
+        pending.backendSessionId,
+        draft.visibility === "community" ? "public" : "private"
+      ).catch((error) => console.error("[session] 更新可见性失败:", error));
+    }
+    addStory({
+      ...draft,
+      backendSessionId: pending?.backendSessionId,
+      backendVideoTaskId: pending?.backendVideoTaskId,
+    });
     setPending(null);
     setPersona(null);
     setCastPersonas(null);
@@ -123,7 +135,18 @@ function Shell() {
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
-      {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} onBack={discardPending} onPick={(p, all) => { setPersona(p); setCastPersonas(all); setFrame("sandplay"); }} />}
+      {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} onBack={discardPending} onPick={(p, all, session) => {
+        setPersona(p);
+        setCastPersonas(all);
+        if (session) {
+          setPending((current) => current ? {
+            ...current,
+            backendSessionId: session.session_id,
+            backendVideoTaskId: session.video_task_id,
+          } : current);
+        }
+        setFrame("sandplay");
+      }} />}
       {frame === "draft" && <F3Draft transcript={transcript} onBack={discardPending} onKeep={handleKeep} />}
       {frame === "sandplay" && (pending || activeStory) && (
         <F4Sandplay

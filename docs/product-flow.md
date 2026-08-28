@@ -89,5 +89,5 @@
   - **群聊阵容 = 故事 Top 3**:用户带入一角,其余两角为 AI 发言者,各有独立声线库(对应各自的 LLM session);开场、回应(1–2 位,可沉默)、安静收敛都按人设轮转
   - **"演绎中"加载态**:进直播间后 AIGC 视频未就绪(mock 8s),舞台先给呼吸光晕 + "staging the scene…" 友好等待,对话流照常进行;就绪后场景 crossfade 600ms 进场,说话者 step-forward + 提亮
   - 老故事(从 Home 进)没有选角记录,回退到 mock 阵容 + "自己"身份发言
-- 待接真接口:视频轮询 GET /api/video-tasks/{task_id} → playback URL;群聊改 SSE role.delta 流式
+- 真后端已接:创建 session 后轮询 `GET /api/sessions/{id}` 的 `video.status`，就绪后调 `GET /api/videos/{video.id}/playback`;群聊走 `messages/reply-runs + SSE events`
 - **AIGC 已可接真实 LLM**:服务端路由 `/api/llm/personas`(提取 Top 3,含"我")与 `/api/llm/turn`(每角色独立 key 并发发言,可沉默),配 `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEYS` 即启用,未配置自动回退 mock

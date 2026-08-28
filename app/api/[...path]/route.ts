@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * 通用代理路由（hackathon-plan §4.1）：浏览器只跟同源 /api/* 打交道，
  * 服务端再 HTTP 转发到后端 —— 后端无需域名/证书/CORS。
- * 转发时去掉 /api 前缀：后端接口形如 /stories 而非 /api/stories。
+ * 业务接口保留后端的 /api 前缀；健康检查例外位于 /health。
  */
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,11 @@ async function proxy(req: NextRequest, { params }: { params: { path: string[] } 
   if (!BACKEND) {
     return NextResponse.json({ code: 500, data: null, message: "BACKEND_URL 未配置" }, { status: 500 });
   }
-  const url = `${BACKEND}/${params.path.join("/")}${req.nextUrl.search}`;
+  const joinedPath = params.path.join("/");
+  const backendPath = joinedPath === "health" || joinedPath === "health/ready"
+    ? `/${joinedPath}`
+    : `/api/${joinedPath}`;
+  const url = `${BACKEND}${backendPath}${req.nextUrl.search}`;
   const headers = new Headers(req.headers);
   headers.delete("host");
   const hasBody = !["GET", "HEAD"].includes(req.method);

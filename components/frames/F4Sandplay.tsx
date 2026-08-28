@@ -105,13 +105,16 @@ export default function F4Sandplay({
   }
 
   /** 跑一轮 LLM 发言;失败只记日志、节奏继续(全真实模式,不塞假数据) */
-  async function runRound(mode: TurnMode, speakers: string[], after: () => void) {
+  async function runRound(mode: TurnMode, speakers: string[], after: () => void, userMessage?: string) {
     try {
       const turns = await runTurn(mode, speakers, {
         transcript: storyRef.current.transcript,
         cast: castRef.current,
         history: messagesRef.current,
         userName: personaRef.current?.name ?? "the narrator",
+        sessionId: storyRef.current.backendSessionId,
+        userPersonaId: personaRef.current?.id,
+        userMessage,
       });
       if (!aliveRef.current) return;
       if (turns.length > 0) {
@@ -165,7 +168,7 @@ export default function F4Sandplay({
     setShowEnd(false); // 用户回来了 → 收起结束弹窗
     setMessages((m) => [...m, toTurn(story.id, { speakerId: "user", text })]);
     // 用户开口:所有 AI 都要思考如何回应用户,然后节奏重置
-    void runRound("answer", aiSpeakersRef.current, waitForUser);
+    void runRound("answer", aiSpeakersRef.current, waitForUser, text);
   };
 
   const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
@@ -173,7 +176,7 @@ export default function F4Sandplay({
   return (
     <div className="frame frame-enter" style={{ padding: 0 }}>
       {/* ══ 全幅竖屏舞台(AIGC video 槽位,未就绪时"演绎中"加载态) ══ */}
-      <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} />
+      <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
 
       {/* ══ 顶部 nav:浮在画面上,带柔光衬底保证可读 ══ */}
       <div

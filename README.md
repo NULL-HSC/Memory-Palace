@@ -36,16 +36,20 @@ cp .env.example .env.local
 配上 `BACKEND_URL` 后,`app/api/[...path]/route.ts` 自动转发所有 `/api/*` 请求;
 前端所有请求收敛在 **`lib/api.ts`**,逐条把 mock 分支换成真接口即可。
 
-### API 契约(待与后端确认,错误格式统一 `{ code, data, message }`)
+### API 契约（OpenAPI 0.1.0，错误格式统一 `{ code, data, message }`）
 
 | 接口 | 方法 | 请求 | 响应 | 现状 |
 |---|---|---|---|---|
-| `/health` | GET | — | `{ ok: true }` | 联调第一个测它 |
-| `/stories` | GET | — | `Story[]` | mock:localStorage + 种子 |
-| `/stories` | POST | `{ title, transcript, cover, reflection? }` | `{ id }` | mock |
-| `/ai/title` | POST | `{ transcript }` | `{ title }` (≤8 词,名词短语,不剧透) | mock:标题池 |
-| `/sandplay/opening` | POST | `{ storyId, transcript }` | `{ speakerId, text }[]` | mock:脚本开场 |
-| `/sandplay/turn` | POST | `{ storyId, history }` | `{ speakerId, text }[]` (1–2 位回应,每句 ≤30 词) | mock:回应池轮转 |
+| `/health` | GET | — | `{ status: "ok" }` | 裸 JSON，不走信封 |
+| `/api/sessions` | POST | `{ final_text }` | `202 + {session_id,video_task_id,...}` | 新建故事与异步生成 |
+| `/api/sessions/{id}/personas` | GET | — | `{items: Persona[]}` | 选带入角色 |
+| `/api/sessions/{id}/messages` | POST | `{persona_id,content}` | `202 + {reply_run_id,message_id,status}` | 用户发言 |
+| `/api/sessions/{id}/reply-runs` | POST | `{persona_id}` | `202 + {reply_run_id,status}` | 无用户新消息时启动回复 |
+| `/api/sessions/{id}/events` | GET | `cursor?` | SSE | `role.delta` 按 `message_id` 聚合 |
+| `/api/sessions/{id}` | GET | — | `{...,video}` | 会话/人设/视频状态 |
+| `/api/videos/{video_id}/playback` | GET | — | `{playback_url}` | 视频播放地址 |
+| `/api/sessions/{id}/visibility` | PATCH | `{visibility: private|public}` | `data:null` | Keep 时更新 |
+| `/api/transcriptions` | POST | multipart `audio` | `{transcript}` | 待录音 UI 改为真采集后调用 |
 
 ## 结构
 
@@ -53,7 +57,7 @@ cp .env.example .env.local
 app/page.tsx                # 帧状态机 F1–F5 + T1 转场 overlay
 app/api/[...path]/route.ts  # 通用代理路由(转发时去掉 /api 前缀)
 app/globals.css             # design tokens(晴空蓝剪贴簿色系,美术 2026-08)+ 全部动效
-lib/api.ts                  # 唯一请求入口 + USE_MOCK 开关
+lib/api.ts                  # 唯一请求入口 + 认证/session/SSE/视频契约
 lib/store.tsx               # stories + Lv 进度(localStorage 持久化)
 lib/mock/                   # 种子故事 / 伪转写文本 / 标题池 / 人设 Top 3(对话链路已无 mock,全真实 LLM)
 docs/backend-progress.md    # 后端联调进度实测记录(按时间戳往顶部追加)

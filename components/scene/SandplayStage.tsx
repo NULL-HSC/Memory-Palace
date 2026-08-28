@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import type { Persona } from "@/lib/types";
+import { getPlaybackUrl, getSessionStatus } from "@/lib/api";
 
 /**
  * F4 舞台 v3 —— 竖屏全幅 AIGC video 槽位（直播间形态）
  * - 视频未就绪:友好加载态(呼吸光晕 + "staging the scene…" 提示),对话流照常盖在上面
  * - 就绪后:场景静帧(占位)crossfade 600ms 进场;真视频同槽位替换
- *   TODO(联调): 按契约轮询 GET /api/video-tasks/{task_id},succeeded 后接 playback URL
+ * - 真后端:轮询 GET /api/sessions/{id} 中的 video.status，完成后取 /api/videos/{video.id}/playback
  * - 台上角色 = 故事 Top 3 人设;说话者 step-forward + 提亮,其余退后变暗
  */
 
@@ -15,6 +16,7 @@ interface Props {
   cast: Persona[]; // 故事 Top 3(含用户带入的那位)
   speakerId: string | null; // 当前发言的 persona id
   title?: string;
+  sessionId?: string;
 }
 
 /** 站位:舞台中部偏上(弹幕浮层之上),中置主角 + 两翼 */
@@ -26,12 +28,47 @@ const SLOTS: Array<{ style: React.CSSProperties; size: number; delay: string }> 
 
 const MOCK_VIDEO_MS = 8000; // mock:VLM 生成 10s 视频的等待时长
 
-export default function SandplayStage({ cast, speakerId, title }: Props) {
+export default function SandplayStage({ cast, speakerId, title, sessionId }: Props) {
   const [ready, setReady] = useState(false);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), MOCK_VIDEO_MS);
-    return () => clearTimeout(t);
-  }, []);
+    let alive = true;
+    setReady(false);
+    setPlaybackUrl(null);
+    if (!sessionId) {
+      const timer = setTimeout(() => setReady(true), MOCK_VIDEO_MS);
+      return () => {
+        alive = false;
+        clearTimeout(timer);
+      };
+    }
+
+    void (async () => {
+      try {
+        for (let attempt = 0; attempt < 120 && alive; attempt += 1) {
+          const session = await getSessionStatus(sessionId);
+          const status = session.video.status.toLowerCase();
+          if (["succeeded", "completed", "ready", "success"].includes(status)) {
+            const url = await getPlaybackUrl(session.video.id);
+            if (alive) setPlaybackUrl(url);
+            return;
+          }
+          if (["failed", "error", "cancelled", "canceled"].includes(status)) {
+            throw new Error(session.video.message || session.video.error_code || "视频生成失败");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2500));
+        }
+        throw new Error("等待视频生成超时");
+      } catch (error) {
+        console.error("[video] 加载失败，使用本地舞台兜底:", error);
+        if (alive) setReady(true);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionId]);
 
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#EAF6FA" }}>
@@ -44,10 +81,26 @@ export default function SandplayStage({ cast, speakerId, title }: Props) {
           transition: "opacity 600ms var(--ease-soft)",
         }}
       >
+        {playbackUrl && (
+          <video
+            src={playbackUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            onCanPlay={() => setReady(true)}
+            onError={() => {
+              console.error("[video] 播放地址无法加载，使用本地舞台兜底");
+              setPlaybackUrl(null);
+              setReady(true);
+            }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        )}
         <svg
           viewBox="0 0 390 844"
           preserveAspectRatio="xMidYMid slice"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: playbackUrl ? 0 : 1 }}
           aria-hidden
         >
           <defs>
