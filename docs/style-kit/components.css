@@ -1,0 +1,230 @@
+/* ============================================================
+   Paper Companion — component recipes
+   Requires tokens.css. Class names are the contract; if you
+   rename one, rename it in the guideline too.
+   ============================================================ */
+
+/* ---- 1. Ground -------------------------------------------- */
+
+a { text-decoration: none; color: inherit; }
+
+.screen {
+  position: relative;
+  width: 390px;
+  height: 844px;
+  overflow: hidden;
+  background-color: var(--ground);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+/* Paper grain. Always the topmost layer, always inert. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
+}
+
+/* Gingham. The signature fill for anything "blank" or awaiting content. */
+.gingham {
+  background-color: var(--cream);
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(47,159,200,.26) 0 13px, transparent 13px 26px),
+    repeating-linear-gradient(90deg, rgba(47,159,200,.26) 0 13px, transparent 13px 26px);
+}
+
+/* ---- 2. Puffy controls ------------------------------------ */
+/* A pressable thing is a slab with a visible underside, not a
+   flat rectangle with a blur. Pressing moves it onto its edge. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 48px;
+  padding: 0 var(--s-6);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--butter);
+  box-shadow: var(--press-butter);
+  color: var(--text-on-butter);
+  font-family: var(--font-ui);
+  font-size: var(--t-lead);   /* 19px/700 clears the large-text threshold */
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--dur-tap) var(--ease-soft),
+              box-shadow var(--dur-tap) var(--ease-soft);
+}
+.btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--butter-under);
+}
+.btn--sky { background: var(--sky); box-shadow: var(--press-sky); color: var(--text-on-sky); }
+.btn--sky:active { box-shadow: 0 0 0 var(--sky-under); }
+
+.btn--quiet {
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  font-size: var(--t-label);
+  background: var(--butter);
+  box-shadow: 0 3px 0 var(--butter-under);
+}
+
+/* A round disc. The add-a-thing affordance. */
+.disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--butter);
+  box-shadow: 0 5px 0 var(--butter-under), var(--lift-2);
+  color: var(--ink-blue);
+  cursor: pointer;
+  transition: transform var(--dur-tap) var(--ease-bounce);
+}
+.disc:active { transform: translateY(5px) scale(.97); }
+
+/* ---- 3. Polaroid ------------------------------------------ */
+/* Replaces the old "mounted print". A story is a printed photo
+   in a cream frame, hung — not a card sitting on a surface. */
+
+.polaroid {
+  position: relative;
+  background: var(--raised);
+  border-radius: var(--r-panel);
+  padding: 14px 14px 56px;
+  box-shadow: var(--lift-2);
+}
+.polaroid--focus { box-shadow: var(--lift-3); }
+/* Smaller hung photos: shallower mat, so a row of them does not
+   line up into a single cream band across the screen. */
+.polaroid--sm { padding: 10px 10px 32px; border-radius: 18px; }
+.polaroid__photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-photo);
+  background: var(--sunken);
+}
+.polaroid__photo > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.polaroid__caption {
+  position: absolute;
+  left: 0; right: 0; bottom: 14px;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: var(--t-title);
+  color: var(--text-large);
+}
+
+/* Washi tape. Decorative, one per screen at most, always askew. */
+.tape {
+  position: absolute;
+  width: 62px;
+  height: 22px;
+  background: rgba(255, 216, 106, .85);
+  box-shadow: 0 1px 3px rgba(23, 106, 145, .14);
+}
+
+/* Binder clip + string. Use in pairs. The string runs to the top edge. */
+.hang { position: absolute; top: 0; width: 2px; background: var(--story); }
+
+/* ---- 4. Chrome -------------------------------------------- */
+
+/* Ribbon tag. Screen title. Notched right end, never a plain rectangle. */
+.ribbon {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 26px 0 18px;
+  background: var(--ink-blue);
+  color: var(--text-on-ink);
+  font-family: var(--font-hand);
+  font-size: var(--t-title);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+}
+
+/* Tab bar. Sits on a wave; the wave is an SVG sibling, not a border. */
+.tabbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--tabbar-h);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding-bottom: 18px;
+  background: var(--sky);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 64px;
+  min-height: 44px;
+  color: var(--text-on-sky);       /* Deep Ink on Clear Sky = 4.97:1. See §4 */
+  font-size: var(--t-label);
+  font-weight: 700;
+}
+.tab--active {
+  padding: 8px 14px 6px;
+  border-radius: var(--r-pill);
+  background: var(--cream);
+  color: var(--ink-blue);
+}
+
+/* ---- 5. Chat ---------------------------------------------- */
+
+.bubble {
+  max-width: 250px;
+  padding: 12px 16px;
+  border-radius: 20px 20px 20px 6px;
+  background: var(--raised);
+  box-shadow: var(--lift-1);
+  font-size: var(--t-body);
+  line-height: 1.5;
+}
+.bubble--mine {
+  border-radius: 20px 20px 6px 20px;
+  background: var(--sky);
+  color: var(--text-on-sky);
+  box-shadow: none;
+}
+
+/* An IP sticker used as a speaker chip. Keyline already in the PNG. */
+.ip-chip {
+  width: 40px; height: 40px;
+  object-fit: contain;
+  object-position: 50% 20%;
+  flex-shrink: 0;
+}
+
+/* ---- 6. Motion -------------------------------------------- */
+
+@keyframes bob   { 0%,100% { transform: translateY(0) }    50% { transform: translateY(-7px) } }
+@keyframes sway  { 0%,100% { transform: rotate(-1.5deg) }  50% { transform: rotate(1.5deg) } }
+@keyframes pop   { from { transform: scale(.86); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+.is-bob  { animation: bob 3.6s var(--ease-soft) infinite; }
+.is-sway { animation: sway 4.4s var(--ease-soft) infinite; transform-origin: 50% 0; }
+.is-pop  { animation: pop var(--dur-move) var(--ease-bounce) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-bob, .is-sway, .is-pop { animation: none; }
+  * { transition-duration: 1ms !important; }
+}
+
+/* ---- 7. Focus --------------------------------------------- */
+
+:focus-visible {
+  outline: 3px solid var(--story);
+  outline-offset: 3px;
+  border-radius: var(--r-chip);
+}
