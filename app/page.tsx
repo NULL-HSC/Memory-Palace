@@ -9,9 +9,10 @@ import F3Draft from "@/components/frames/F3Draft";
 import F4Sandplay from "@/components/frames/F4Sandplay";
 import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
+import Auth from "@/components/frames/Auth";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
-import { updateSessionVisibility } from "@/lib/api";
+import { USE_BACKEND, hasAccessToken, logout, setAccessToken, updateSessionVisibility } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -19,12 +20,15 @@ import { updateSessionVisibility } from "@/lib/api";
  * T1: companion 从角落跳到画面中央
  */
 
-type Frame = "home" | "listening" | "pick" | "draft" | "sandplay" | "spaces";
+type Frame = "auth" | "home" | "listening" | "pick" | "draft" | "sandplay" | "spaces";
 type Overlay = "t1" | null;
+
+/** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
+const DEMO_SKIP_KEY = "lilili.demo.skip";
 
 function Shell() {
   const { stories, addStory } = useStore();
-  const [frame, setFrame] = useState<Frame>("home");
+  const [frame, setFrame] = useState<Frame | null>(null); // null = 启动中(等待 token 探测)
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [overlayGo, setOverlayGo] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -49,13 +53,46 @@ function Shell() {
     };
   }, [overlay]);
 
-  /* 调试/演示捷径：?frame=listening|pick|draft|sandplay|spaces 直达任意帧 */
+  /* 启动:无 token → auth 帧;已登录 → home。
+     调试/演示捷径 ?frame=listening|pick|draft|sandplay|spaces 优先于登录态,直达任意帧 */
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("frame");
-    if (!f) return;
-    if (f === "draft" || f === "pick") setTranscript(MOCK_TRANSCRIPT);
-    if (f !== "home") setFrame(f as Frame);
+    if (f && f !== "home") {
+      if (f === "draft" || f === "pick") setTranscript(MOCK_TRANSCRIPT);
+      setFrame(f as Frame);
+      return;
+    }
+    const skipped = !USE_BACKEND && localStorage.getItem(DEMO_SKIP_KEY) === "1";
+    setFrame(hasAccessToken() || skipped ? "home" : "auth");
   }, []);
+
+  /* 登录/注册成功(token 已由 api 层写入 localStorage)→ home */
+  const handleAuthed = () => {
+    setHomeEnter("frame-enter");
+    setFrame("home");
+  };
+
+  /* mock 模式演示跳过(demo only):写本地标记,刷新保持 */
+  const handleSkipDemo = () => {
+    try {
+      localStorage.setItem(DEMO_SKIP_KEY, "1");
+    } catch {
+      /* 本地存储不可用时仅本次会话生效 */
+    }
+    handleAuthed();
+  };
+
+  /* 登出:尽力通知后端,本地无论如何清 token 回 auth 帧 */
+  const handleLogout = () => {
+    void logout().catch((error) => console.error("[auth] 后端登出失败,本地登出:", error));
+    setAccessToken(null);
+    try {
+      localStorage.removeItem(DEMO_SKIP_KEY);
+    } catch {
+      /* ignore */
+    }
+    setFrame("auth");
+  };
 
   /* T1 · Home → Listening：点 companion / "+" */
   const startNewStory = () => {
@@ -123,6 +160,7 @@ function Shell() {
 
   return (
     <div className="app-shell">
+      {frame === "auth" && <Auth onAuthed={handleAuthed} onSkipDemo={handleSkipDemo} />}
       {frame === "home" && (
         <F1Home
           enterClass={homeEnter}
@@ -132,6 +170,7 @@ function Shell() {
           }}
           onNewStory={startNewStory}
           onVisitSpaces={() => setFrame("spaces")}
+          onLogout={handleLogout}
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}

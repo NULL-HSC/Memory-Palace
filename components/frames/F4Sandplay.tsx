@@ -110,9 +110,14 @@ export default function F4Sandplay({
 
   /** 跑一轮 LLM 发言;失败在弹幕区给重试入口、节奏继续(全真实模式,不塞假数据) */
   async function runRound(mode: TurnMode, speakers: string[], after: () => void, userMessage?: string) {
+    // 无人可发言(如短转写只提取到"我")→ 直接跳过本轮,不打 422、不挂重试 chip
+    if (speakers.length === 0) {
+      if (aliveRef.current) after();
+      return;
+    }
     // 即时反馈:请求期间就先亮出"对方正在输入"(3-6s 的 LLM 等待不再像没人搭理);
     // 返回后若首位发言人相同,pump 接管 typingId 无闪烁
-    if (speakers.length > 0 && aliveRef.current) setTypingId(speakers[0]);
+    if (aliveRef.current) setTypingId(speakers[0]);
     try {
       const turns = await runTurn(mode, speakers, {
         transcript: storyRef.current.transcript,

@@ -108,7 +108,14 @@ function getAccessToken(): string | null {
     const stored = window.localStorage.getItem(ACCESS_TOKEN_KEY);
     if (stored) return stored;
   }
+  // 黑客松短期方案:登录态优先读 localStorage(register/login 写入),
+  // 未登录时回落到手工注入的 NEXT_PUBLIC_BACKEND_ACCESS_TOKEN。
   return process.env.NEXT_PUBLIC_BACKEND_ACCESS_TOKEN || null;
+}
+
+/** 是否已有登录态(供帧状态机启动时决定是否进 auth 帧) */
+export function hasAccessToken(): boolean {
+  return Boolean(getAccessToken());
 }
 
 export function setAccessToken(token: string | null) {

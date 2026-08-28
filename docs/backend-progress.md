@@ -67,4 +67,4 @@
 ### 前端对应状态
 
 - 当前全 mock(`lib/api.ts` 的 `/stories`、`/ai/title`、`/sandplay/*` 为旧约定),联调时按 `frontend-api.md` 重写
-- 认证页/UI 未做,等后端主链路接口就绪后一并排期
+- 认证页/UI 已接入(2026-08-28):`components/frames/Auth.tsx` 登录/注册同屏,启动无 token 进 auth 帧,mock 模式有 demo 跳过入口

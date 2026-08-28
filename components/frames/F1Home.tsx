@@ -31,11 +31,13 @@ export default function F1Home({
   onOpenSandplay,
   onNewStory,
   onVisitSpaces,
+  onLogout,
   enterClass = "frame-enter-left",
 }: {
   onOpenSandplay: (storyId: string) => void;
   onNewStory: () => void;
   onVisitSpaces: () => void;
+  onLogout?: () => void;
   enterClass?: string;
 }) {
   const { stories } = useStore();
@@ -156,11 +158,21 @@ export default function F1Home({
             {stories.length}
           </span>
         </div>
-        <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }}>
-          <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
-            Visit other spaces
-          </span>
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, marginRight: -12 }}>
+          <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end" }}>
+            <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
+              Visit other spaces
+            </span>
+          </button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{ padding: "2px 12px 4px 12px", fontSize: 11.5, fontStyle: "italic", color: "var(--placeholder)" }}
+            >
+              sign out
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ══ Gallery：纵深扇形 + 暖色氛围光 ══ */}
