@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { Persona } from "@/lib/types";
-import { prepareSandplay, type CreateSessionResponse } from "@/lib/api";
+import { prepareSandplay, type CreateSessionResponse, type PreparedSandplay } from "@/lib/api";
 
 /**
  * 沙盘演绎 · 板块一 —— 选带入角色（docs/product-flow.md F4）
@@ -11,15 +11,19 @@ import { prepareSandplay, type CreateSessionResponse } from "@/lib/api";
  */
 export default function PickRole({
   transcript,
+  prepared,
   onBack,
   onPick,
 }: {
   transcript: string; // 用户转写文本,LLM 从中提取 Top 3 人设
+  /** 阶段一已经准备好的结果。给了就直接用,不再请求一次(解构很贵,且会另起一个视频任务)。
+   *  没给则自行加载 —— 保留 ?frame=pick 调试捷径能单独进这一帧。 */
+  prepared?: PreparedSandplay | null;
   onBack: () => void;
   onPick: (persona: Persona, cast: Persona[], session?: CreateSessionResponse) => void; // 带入者 + 完整 Top 3 阵容
 }) {
-  const [personas, setPersonas] = useState<Persona[] | null>(null);
-  const [session, setSession] = useState<CreateSessionResponse | undefined>();
+  const [personas, setPersonas] = useState<Persona[] | null>(prepared?.personas ?? null);
+  const [session, setSession] = useState<CreateSessionResponse | undefined>(prepared?.session);
   const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null); // 提取失败:不塞 mock,给重试 + 真实原因
   const inflightRef = useRef<string | null>(null); // dev StrictMode 双挂会双发同一请求,按 transcript 去重
@@ -30,9 +34,9 @@ export default function PickRole({
     setError(null);
     setPersonas(null);
     prepareSandplay(transcript)
-      .then((prepared) => {
-        setPersonas(prepared.personas);
-        setSession(prepared.session);
+      .then((prep) => {
+        setPersonas(prep.personas);
+        setSession(prep.session);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => {
@@ -41,9 +45,14 @@ export default function PickRole({
   };
 
   useEffect(() => {
+    if (prepared?.personas) {
+      setPersonas(prepared.personas);
+      setSession(prepared.session);
+      return;
+    }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcript]);
+  }, [transcript, prepared]);
 
   const chosen = personas?.find((p) => p.id === picked) ?? null;
 

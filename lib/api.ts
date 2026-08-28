@@ -1,4 +1,4 @@
-import type { DialogueTurn, Persona, SpeakerTurn, Story } from "./types";
+import type { DialogueTurn, Persona, SpeakerTurn, Story, StoryScene } from "./types";
 import { pickMockTitle } from "./mock/titles";
 
 /**
@@ -101,6 +101,8 @@ export interface ReplyRunCreated {
 export interface PreparedSandplay {
   personas: Persona[];
   session?: CreateSessionResponse;
+  /** 本地解构产出的场景(真后端模式下由后端自行喂 VLM,这里为 undefined) */
+  scene?: StoryScene;
 }
 
 function getAccessToken(): string | null {
@@ -316,22 +318,38 @@ async function localLlm<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function getLocalPersonas(transcript: string): Promise<Persona[]> {
+async function getLocalPersonas(transcript: string): Promise<{ personas: Persona[]; scene?: StoryScene }> {
   const result = await localLlm<{
-    personas: Array<{ id: string; name: string; profile: string; isUser?: boolean }>;
+    scene?: StoryScene;
+    personas: Array<{
+      id: string;
+      name: string;
+      profile: string;
+      voice?: string;
+      stance?: string;
+      appearance?: string;
+      isUser?: boolean;
+    }>;
   }>("/api/llm/personas", { transcript });
   if (result.personas.length === 0) throw new Error("LLM 未提取到人设");
   let poolIndex = 0;
-  return result.personas.map((persona) => ({
-    id: persona.id,
-    name: persona.name,
-    profile: persona.profile,
-    avatar: persona.isUser ? ME_AVATAR : AVATAR_POOL[poolIndex++ % AVATAR_POOL.length],
-  }));
+  return {
+    scene: result.scene,
+    personas: result.personas.map((persona) => ({
+      id: persona.id,
+      name: persona.name,
+      profile: persona.profile,
+      // voice/stance 一路带到群聊 prompt;appearance 留给 VLM
+      voice: persona.voice,
+      stance: persona.stance,
+      appearance: persona.appearance,
+      avatar: persona.isUser ? ME_AVATAR : AVATAR_POOL[poolIndex++ % AVATAR_POOL.length],
+    })),
+  };
 }
 
 export async function prepareSandplay(transcript: string): Promise<PreparedSandplay> {
-  if (!USE_BACKEND) return { personas: await getLocalPersonas(transcript) };
+  if (!USE_BACKEND) return getLocalPersonas(transcript);
   const session = await createSession(transcript);
   const personas = await waitForPersonas(session.session_id);
   return { personas, session };
@@ -522,8 +540,30 @@ export async function runTurn(mode: TurnMode, speakers: string[], ctx: ChatCtx):
     mode,
     history: ctx.history ?? [],
     userName: ctx.userName,
+    // 必须转发:answer 轮发起时用户这句通常还没进 history(客户端 setMessages 未重渲染),
+    // 不带上服务端就看不到用户说了什么。真后端分支走 sendSessionMessage 已另行携带。
+    userMessage: ctx.userMessage,
   });
   return result.turns;
+}
+
+/* ── 阶段一 · 旁观者(godfather):说完故事、等 AIGC 视频期间的单人对话 ──
+   与阶段二群聊是两套逻辑:一个声音、站在故事外、由视频就绪事件结束。
+   详见 app/api/llm/godfather/route.ts 与 docs/product-flow.md。 */
+
+export type GodfatherMode = "open" | "respond" | "linger" | "handoff";
+
+export async function runGodfather(
+  mode: GodfatherMode,
+  ctx: { transcript: string; history?: DialogueTurn[]; userMessage?: string }
+): Promise<string> {
+  const result = await localLlm<{ text: string }>("/api/llm/godfather", {
+    transcript: ctx.transcript,
+    mode,
+    history: (ctx.history ?? []).map((h) => ({ speakerId: h.speakerId, text: h.text })),
+    userMessage: ctx.userMessage,
+  });
+  return result.text;
 }
 
 /* ── 视频与辅助功能 ── */

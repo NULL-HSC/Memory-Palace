@@ -195,7 +195,11 @@ export default function F4Sandplay({
     setInput("");
     if (timerRef.current) clearTimeout(timerRef.current);
     setShowEnd(false); // 用户回来了 → 收起结束弹窗
-    setMessages((m) => [...m, toTurn(story.id, { speakerId: "user", text })]);
+    const userTurn = toTurn(story.id, { speakerId: "user", text });
+    // ref 平时靠重渲染赋值,但 runRound 是在 setMessages 之后同步调用的 —— 那时还没重渲染。
+    // 不手动同步这一句,发出去的 history 就少了用户刚说的话(下一行 setMessages 会以相同内容覆盖回来)。
+    messagesRef.current = [...messagesRef.current, userTurn];
+    setMessages((m) => [...m, userTurn]);
     // 用户开口:所有 AI 都要思考如何回应用户,然后节奏重置
     void runRound("answer", aiSpeakersRef.current, waitForUser, text);
   };

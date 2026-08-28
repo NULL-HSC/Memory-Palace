@@ -9,18 +9,22 @@ import F3Draft from "@/components/frames/F3Draft";
 import F4Sandplay from "@/components/frames/F4Sandplay";
 import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
+import Reflect from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
-import { USE_BACKEND, hasAccessToken, logout, setAccessToken, updateSessionVisibility } from "@/lib/api";
+import { USE_BACKEND, hasAccessToken, logout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
- * 新故事：F1 Home → F2 Listening → Pick 选带入角色 → F4 Sandplay（草稿先行）→ F3 Keep 页 → 入长廊回 Home；F1 ↔ F5
+ * 新故事:F1 Home → F2 Listening → **Reflect 阶段一(旁观者陪聊)** → Pick 选带入角色
+ *        → F4 Sandplay 阶段二(草稿先行)→ F3 Keep 页 → 入长廊回 Home;F1 ↔ F5
+ * 阶段一同时并行做解构(建 session / 触发视频任务 / 提取人设),结果经 handleReflected
+ * 传给 PickRole —— 不要在 PickRole 里再请求一次,那会另起一个视频任务。
  * T1: companion 从角落跳到画面中央
  */
 
-type Frame = "auth" | "home" | "listening" | "pick" | "draft" | "sandplay" | "spaces";
+type Frame = "auth" | "home" | "listening" | "reflect" | "pick" | "draft" | "sandplay" | "spaces";
 type Overlay = "t1" | null;
 
 /** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
@@ -36,6 +40,7 @@ function Shell() {
   const [pending, setPending] = useState<Story | null>(null); // 未 Keep 的草稿故事
   const [persona, setPersona] = useState<Persona | null>(null); // 用户选择带入的角色
   const [castPersonas, setCastPersonas] = useState<Persona[] | null>(null); // 故事 Top 3 完整阵容
+  const [prepared, setPrepared] = useState<PreparedSandplay | null>(null); // 阶段一并行准备好的解构结果
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
 
   /* 转场两段式：挂载后触发位移，结束后切帧（目前仅 T1 使用） */
@@ -58,7 +63,7 @@ function Shell() {
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("frame");
     if (f && f !== "home") {
-      if (f === "draft" || f === "pick") setTranscript(MOCK_TRANSCRIPT);
+      if (f === "draft" || f === "pick" || f === "reflect") setTranscript(MOCK_TRANSCRIPT);
       setFrame(f as Frame);
       return;
     }
@@ -98,13 +103,15 @@ function Shell() {
   const startNewStory = () => {
     setPersona(null);
     setCastPersonas(null);
+    setPrepared(null);
     setOverlay("t1");
     setOverlayGo(false);
   };
 
-  /* T2 收尾：F2 Done → 先选带入角色（板块一），再进沙盘直播间 */
+  /* T2 收尾:F2 Done → 阶段一(旁观者陪聊,同时并行做解构/建 session)→ 选角 → 直播间 */
   const handleListened = (text: string) => {
     setTranscript(text);
+    setPrepared(null);
     setPending({
       id: "pending",
       title: "",
@@ -113,6 +120,23 @@ function Shell() {
       transcript: text,
       createdAt: Date.now(),
     });
+    setFrame("reflect");
+  };
+
+  /* 阶段一结束(场景就绪):把解构结果带进选角,session 信息落到草稿上 */
+  const handleReflected = (result: PreparedSandplay) => {
+    setPrepared(result);
+    if (result.session) {
+      setPending((current) =>
+        current
+          ? {
+              ...current,
+              backendSessionId: result.session!.session_id,
+              backendVideoTaskId: result.session!.video_task_id,
+            }
+          : current
+      );
+    }
     setFrame("pick");
   };
 
@@ -140,6 +164,7 @@ function Shell() {
     setPending(null);
     setPersona(null);
     setCastPersonas(null);
+    setPrepared(null);
     backHome();
   };
 
@@ -148,6 +173,7 @@ function Shell() {
     setPending(null);
     setPersona(null);
     setCastPersonas(null);
+    setPrepared(null);
     backHome();
   };
 
@@ -174,7 +200,14 @@ function Shell() {
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
-      {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} onBack={discardPending} onPick={(p, all, session) => {
+      {frame === "reflect" && (
+        <Reflect
+          transcript={pending?.transcript ?? transcript}
+          onReady={handleReflected}
+          onBack={discardPending}
+        />
+      )}
+      {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} prepared={prepared} onBack={discardPending} onPick={(p, all, session) => {
         setPersona(p);
         setCastPersonas(all);
         if (session) {
