@@ -71,7 +71,7 @@ function Field({
           {label}
         </span>
         {error && (
-          <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--accent)" }}>{error}</span>
+          <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--ink)" }}>{error}</span>
         )}
       </div>
     </div>
@@ -163,14 +163,14 @@ export default function Auth({
           <span
             style={{
               display: "inline-block",
-              background: "#2F9FC8",
-              color: "#FFFFFF",
+              background: "var(--story)",
+              color: "var(--text-on-ink)",
               fontSize: 17,
               fontWeight: 500,
               padding: "5px 16px 6px",
               borderRadius: 9,
               transform: "rotate(-2deg)",
-              boxShadow: "0 3px 8px rgba(23,60,84,0.16)",
+              boxShadow: "var(--lift-2)",
             }}
           >
             理理理 lilili
@@ -268,7 +268,7 @@ export default function Auth({
 
         {/* 后端错误:统一信封的 message 原样展示 */}
         {formError && (
-          <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--accent)", marginTop: 12 }}>
+          <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", marginTop: 12 }}>
             {formError}
           </div>
         )}
@@ -280,21 +280,10 @@ export default function Auth({
       <button
         onClick={submit}
         disabled={busy}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          height: 54,
-          borderRadius: 27,
-          background: "var(--accent)",
-          boxShadow: "var(--shadow-button)",
-          flexShrink: 0,
-          opacity: busy ? 0.72 : 1,
-          transition: "opacity 200ms var(--ease-soft)",
-        }}
+        className="btn"
+        style={{ width: "100%", flexShrink: 0 }}
       >
-        <span style={{ fontSize: 17, fontWeight: 500, color: "var(--paper)" }}>
+        <span style={{ fontSize: 19, fontWeight: 700 }}>
           {busy ? "one moment…" : mode === "login" ? "Enter my room" : "Create my room"}
         </span>
       </button>
@@ -311,7 +300,7 @@ export default function Auth({
             fontSize: 14,
             fontStyle: "italic",
             color: "var(--readable)",
-            borderBottom: "1px solid #A9D4E2",
+            borderBottom: "1px solid var(--line-strong)",
             paddingBottom: 2,
           }}
         >

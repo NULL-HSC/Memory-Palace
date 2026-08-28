@@ -94,7 +94,7 @@ export default function PickRole({
                 padding: "0 22px",
                 borderRadius: 22,
                 border: "1px solid var(--line)",
-                background: "#FFFFFF",
+                background: "var(--raised)",
                 fontSize: 14.5,
                 color: "var(--ink)",
               }}
@@ -105,7 +105,7 @@ export default function PickRole({
         ) : personas === null ? (
           <>
             {[0, 1, 2].map((i) => (
-              <div key={i} className="shimmer" style={{ height: 76, borderRadius: 16, background: "rgba(159,195,212,0.22)" }} />
+              <div key={i} className="shimmer" style={{ height: 76, borderRadius: 16, background: "var(--mist)" }} />
             ))}
             <div style={{ textAlign: "center", marginTop: 8 }}>
               <span className="meta-italic" style={{ fontSize: 13 }}>reading your story…</span>
@@ -124,8 +124,8 @@ export default function PickRole({
                   gap: 14,
                   padding: "14px 16px",
                   borderRadius: 16,
-                  border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
+                  border: selected ? "1.5px solid var(--ink-blue)" : "1px solid var(--line)",
+                  background: selected ? "var(--mist)" : "var(--raised)",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "left",
@@ -137,7 +137,7 @@ export default function PickRole({
                     width: 48,
                     height: 48,
                     borderRadius: "50%",
-                    background: "#EAF6FA",
+                    background: "var(--mist)",
                     overflow: "hidden",
                     flexShrink: 0,
                     display: "block",
@@ -147,7 +147,7 @@ export default function PickRole({
                   <img src={p.avatar} alt={p.name} style={{ width: 48, height: 48, objectFit: "cover", objectPosition: "50% 12%" }} />
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 16.5, fontWeight: 500, color: selected ? "var(--accent)" : "var(--ink)" }}>
+                  <span style={{ display: "block", fontSize: 16.5, fontWeight: 500, color: selected ? "var(--ink-blue)" : "var(--ink)" }}>
                     {p.name}
                   </span>
                   <span style={{ display: "block", fontSize: 13, fontWeight: 300, lineHeight: 1.45, color: "var(--readable)", marginTop: 3 }}>
@@ -164,25 +164,11 @@ export default function PickRole({
       <div style={{ flex: 1 }} />
       <button
         onClick={() => chosen && onPick(chosen, personas ?? [], session)}
+        className="btn"
         disabled={!chosen}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          height: 54,
-          borderRadius: 27,
-          background: "var(--accent)",
-          boxShadow: "var(--shadow-button)",
-          marginTop: 22,
-          flexShrink: 0,
-          opacity: chosen ? 1 : 0.4,
-          transition: "opacity 250ms var(--ease-soft)",
-        }}
+        style={{ width: "100%", marginTop: 22, flexShrink: 0 }}
       >
-        <span style={{ fontSize: 17, fontWeight: 500, color: "var(--paper)" }}>
-          {chosen ? `Step in as ${chosen.name}` : "Pick a voice to step in"}
-        </span>
+        <span>{chosen ? `Step in as ${chosen.name}` : "Pick a voice to step in"}</span>
       </button>
     </div>
   );

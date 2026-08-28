@@ -146,3 +146,20 @@ Give it, in this order:
 3. This file, as the concrete punch list against the current codebase — sections 1–5 are direct
    contradictions of the signed-off kit; sections 6–7 are gaps the kit doesn't address at all and
    need a decision before an agent just picks something
+
+---
+
+## 迁移执行记录(2026-08-28,agent 完成)
+
+已按 §1–§7 全部落实:
+
+- **§1 CTA**:全部改用 `.btn`(butter 面 + `--butter-under` 硬底边 + 19px/700 + active 下压)——Auth、F3Draft、PickRole(含 `:disabled`)、F4 两个弹窗按钮、F1Home Create、NewStorySlot 加号、F4 发送钮(butter 小圆盘)。coral 仅剩 Auth 错误下划线 1px 描边(斑点用法,合规)。
+- **§2 麦克风**:84px disc → sky 面 + story 硬底边 + lift-2,图标 ink-blue。
+- **§3 字体**:Shantell Sans(400/600/700)+ Quicksand(500/600/700)拉丁子集 woff2 自托管于 `public/fonts/`,globals.css `@font-face`;移除 next/font 的 Newsreader(XiaolaiSC 文件保留未删,但已从字体栈移除——kit 规定 CJK 不用手写字体)。
+- **§4 组件**:MountedPrint → cream 卡面/无描边/lift 阴影/6px 照片角;空槽位 → `.gingham`;Home 标题 → `.ribbon`;**tab bar 未做**(§12 未签署,Discover/Me 无设计,按规则不擅自发明)。
+- **§6 工程**:`.btn:disabled` 已补(opacity 0.55 + 保留底边 + pointer-events none);safe-area 落入 `.frame` 底部 padding、F1 Create、F4秋季输入栏;字体已自托管。
+- **§7**:Toast 阴影 → `--lift- 2`(经别名);流式气泡 `aria-live="polite"`;F4 气泡/弹窗/输入栏全部去毛玻璃改实色(kit:禁 blur);全库阴影统一墨蓝 `rgba(23,106,145,α)`。
+
+验证:`tsc --noEmit`、`next lint`、`next build` 全过;组件与 lib 中除 `layout.tsx` 的 themeColor 元数据外无 hex 字面量。
+
+**有意偏离(待设计确认)**:F4 直播间顶部/底部的可读性 scrim 仍是渐变(kit 禁渐变,但视频背景上无 scrim 文字不可读);扇形卡堆未加 clip+string(与扇形动效冲突)。

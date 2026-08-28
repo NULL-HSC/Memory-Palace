@@ -30,22 +30,37 @@ interface PersonaIn {
 
 type TurnMode = "opening" | "continue" | "invite" | "answer";
 
-const systemFor = (p: PersonaIn, transcript: string) => `You are ${p.name}, a character in a small, gentle group chat gathered around someone's day.
-Your character: ${p.profile}
-The story, told by the narrator: """${transcript}"""
-Rules:
-- Speak in character: warm, casual, honest. Never summarize the story, never lecture.
+/**
+ * 两层 skill 分离,便于分别维护/复用:
+ * - ROOM_CONDUCT(common skill):所有人设、所有 mode 共用的房间行为准则 ——
+ *   防打架/防复读/防斗嘴的规则都在这里,只改一处。
+ * - personaVoice(individual skill):某一个人设的身份与性格,与准则无关。
+ * systemFor 把两层拼起来;promptFor(mode 指令)是第三层,随节奏状态变化。
+ */
+const ROOM_CONDUCT = `Room conduct — the same for everyone in this gathering:
+- Speak in character: warm, casual, honest.
 - ONE message only, max 30 words, same language as the story.
+- Never summarize the story, never lecture, never recap what's already known.
+- React to the single most recent thing someone actually said — build on that specific thread, don't open a fresh tangent.
+- Don't repeat or restate a point another speaker already made this round.
 - If this moment doesn't call for you, reply with exactly: SILENT`;
+
+const personaVoice = (p: PersonaIn) => `You are ${p.name}, a character in this gathering.
+Your character: ${p.profile}`;
+
+const systemFor = (p: PersonaIn, transcript: string) => `${personaVoice(p)}
+The story, told by the narrator: """${transcript}"""
+
+${ROOM_CONDUCT}`;
 
 function promptFor(mode: TurnMode, historyText: string, userName: string): string {
   switch (mode) {
     case "opening":
       return "The story has just been told, and everyone is hearing it for the first time. Give your first reaction. You must speak.";
     case "continue":
-      return `Conversation so far:\n${historyText || "(nothing yet)"}\n\nA quiet lull has fallen — but the gathering isn't over. Share ONE small new beat: a gentle observation, a memory this reminds you of, or a soft question to the others. Do NOT argue, do NOT contradict, do NOT repeat what was said. Only if you truly have nothing new: reply SILENT.`;
+      return `Conversation so far:\n${historyText || "(nothing yet)"}\n\nA quiet lull has fallen — but the gathering isn't over. Pick up the most recent thread and go one layer deeper: name a specific detail from the story it recalls, a question about it, or what it reveals about them. Do NOT start a new topic, do NOT argue, do NOT repeat what was said. Only if you truly have nothing new: reply SILENT.`;
     case "invite":
-      return `Conversation so far:\n${historyText || "(nothing yet)"}\n\n${userName} has been quiet for a while. Address them BY NAME, gently, and invite them in with one small, easy question. You must speak.`;
+      return `Conversation so far:\n${historyText || "(nothing yet)"}\n\n${userName} has been quiet for a while. Address them BY NAME, gently, and invite them in with one small question tied to a specific detail from the story — not a generic "how are you". You must speak.`;
     case "answer":
       return `Conversation so far:\n${historyText || "(nothing yet)"}\n\n${userName} just spoke. Respond to THEM directly, in character. You must speak.`;
   }

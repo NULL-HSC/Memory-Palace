@@ -159,7 +159,7 @@ function Shell() {
   const activeStory = stories.find((s) => s.id === activeStoryId) ?? stories[0];
 
   return (
-    <div className="app-shell">
+    <div className="app-shell grain">
       {frame === "auth" && <Auth onAuthed={handleAuthed} onSkipDemo={handleSkipDemo} />}
       {frame === "home" && (
         <F1Home

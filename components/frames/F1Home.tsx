@@ -132,26 +132,14 @@ export default function F1Home({
     <div className={`frame ${enterClass}`} style={{ padding: 0, overflow: "hidden" }}>
       {/* ══ 顶部:雾蓝扇贝波浪布带 + 虚线车缝(示意图结构) ══ */}
       <svg aria-hidden viewBox="0 0 390 106" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 106, pointerEvents: "none" }}>
-        <path d="M0 0 H390 V52 Q365.6 76 341.25 52 Q316.9 76 292.5 52 Q268.1 76 243.75 52 Q219.4 76 195 52 Q170.6 76 146.25 52 Q121.9 76 97.5 52 Q73.1 76 48.75 52 Q24.4 76 0 52 Z" fill="#D9EEF4" />
-        <path d="M390 44 Q365.6 68 341.25 44 Q316.9 68 292.5 44 Q268.1 68 243.75 44 Q219.4 68 195 44 Q170.6 68 146.25 44 Q121.9 68 97.5 44 Q73.1 68 48.75 44 Q24.4 68 0 44" fill="none" stroke="#2F9FC8" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+        <path d="M0 0 H390 V52 Q365.6 76 341.25 52 Q316.9 76 292.5 52 Q268.1 76 243.75 52 Q219.4 76 195 52 Q170.6 76 146.25 52 Q121.9 76 97.5 52 Q73.1 76 48.75 52 Q24.4 76 0 52 Z" fill="var(--mist)" />
+        <path d="M390 44 Q365.6 68 341.25 44 Q316.9 68 292.5 44 Q268.1 68 243.75 44 Q219.4 68 195 44 Q170.6 68 146.25 44 Q121.9 68 97.5 44 Q73.1 68 48.75 44 Q24.4 68 0 44" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
       </svg>
 
       {/* header:布标签上的标题(示意图:My stories 挂在标签牌上) */}
       <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--screen-top) var(--screen-x) 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span
-            style={{
-              display: "inline-block",
-              background: "#2F9FC8",
-              color: "#FFFFFF",
-              fontSize: 17,
-              fontWeight: 500,
-              padding: "5px 16px 6px",
-              borderRadius: 9,
-              transform: "rotate(-2deg)",
-              boxShadow: "0 3px 8px rgba(23,60,84,0.16)",
-            }}
-          >
+          <span className="ribbon" style={{ transform: "rotate(-2deg)" }}>
             My Stories
           </span>
           <span className="count-pill" style={{ fontSize: 13, padding: "2px 10px" }}>
@@ -160,7 +148,7 @@ export default function F1Home({
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, marginRight: -12 }}>
           <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end" }}>
-            <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid #A9D4E2", paddingBottom: 2 }}>
+            <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid var(--line-strong)", paddingBottom: 2 }}>
               Visit other spaces
             </span>
           </button>
@@ -204,11 +192,11 @@ export default function F1Home({
               transform: "translate(-50%, -50%) rotate(-1.5deg)",
               width: 198,
               height: 255,
-              background: "#FFFFFF",
-              border: "1px solid #D9EEF4",
+              background: "var(--raised)",
+              border: "none",
               borderRadius: 12,
               padding: "10px 10px 34px",
-              boxShadow: "0 6px 16px rgba(23,60,84,0.10)",
+              boxShadow: "0 6px 16px rgba(23,106,145,0.10)",
             }}
           >
             <span
@@ -220,7 +208,7 @@ export default function F1Home({
                 borderRadius: 6,
                 border: "1.5px dashed var(--slot-border)",
                 background:
-                  "repeating-linear-gradient(0deg, rgba(142,212,232,0.22) 0 8px, transparent 8px 16px), repeating-linear-gradient(90deg, rgba(142,212,232,0.22) 0 8px, transparent 8px 16px), #EDF7FA",
+                  "repeating-linear-gradient(0deg, rgba(47,159,200,0.26) 0 8px, transparent 8px 16px), repeating-linear-gradient(90deg, rgba(47,159,200,0.26) 0 8px, transparent 8px 16px), var(--cream)",
               }}
             >
               <span
@@ -231,11 +219,11 @@ export default function F1Home({
                   width: 64,
                   height: 64,
                   borderRadius: "50%",
-                  background: "#FFD86A",
-                  boxShadow: "0 6px 14px rgba(23,60,84,0.18)",
+                  background: "var(--butter)",
+                  boxShadow: "0 6px 14px rgba(23,106,145,0.18)",
                 }}
               >
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2F9FC8" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
                   <path d="M12 5v14M5 12h14" />
                 </svg>
               </span>
@@ -272,7 +260,7 @@ export default function F1Home({
                   <>
                     {[72, 158].map((x) => (
                       <span key={x} aria-hidden style={{ position: "absolute", left: x, top: -46, width: 0, zIndex: 2, pointerEvents: "none" }}>
-                        <span style={{ display: "block", width: 1.5, height: 34, margin: "0 auto", background: "linear-gradient(#A9D4E2, #7FA9BE)" }} />
+                        <span style={{ display: "block", width: 1.5, height: 34, margin: "0 auto", background: "linear-gradient(var(--sky), var(--story))" }} />
                         <span
                           style={{
                             display: "block",
@@ -280,12 +268,12 @@ export default function F1Home({
                             height: 19,
                             margin: "0 auto",
                             borderRadius: 4,
-                            background: "#FFD86A",
-                            boxShadow: "0 2px 4px rgba(23,60,84,0.20)",
+                            background: "var(--butter)",
+                            boxShadow: "0 2px 4px rgba(23,106,145,0.20)",
                             position: "relative",
                           }}
                         >
-                          <span style={{ position: "absolute", left: 5.2, top: 2, bottom: 2, width: 1.6, background: "rgba(23,60,84,0.22)", borderRadius: 1 }} />
+                          <span style={{ position: "absolute", left: 5.2, top: 2, bottom: 2, width: 1.6, background: "rgba(23,106,145,0.22)", borderRadius: 1 }} />
                         </span>
                       </span>
                     ))}
@@ -293,7 +281,7 @@ export default function F1Home({
                 )}
                 <div
                   className={i === front ? "anim-float" : undefined}
-                  style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(23,60,84,0.20))" } : undefined}
+                  style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(23,106,145,0.20))" } : undefined}
                 >
                   <MountedPrint variant="focused" cover={s.cover} checked={i === front} />
                 </div>
@@ -345,12 +333,12 @@ export default function F1Home({
 
       {/* ══ 底部:波浪地面(示意图)—— companion 脚踩地面,Create 是奶油黄大圆 + ══ */}
       <svg aria-hidden viewBox="0 0 390 96" preserveAspectRatio="none" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 96, pointerEvents: "none" }}>
-        <path d="M0 96 V44 Q48 24 97 40 T195 38 T293 42 T390 34 V96 Z" fill="#D9EEF4" />
-        <path d="M0 53 Q48 33 97 49 T195 47 T293 51 T390 43" fill="none" stroke="#FFFFFF" strokeOpacity="0.85" strokeWidth="1.4" strokeDasharray="5 6" strokeLinecap="round" />
+        <path d="M0 96 V44 Q48 24 97 40 T195 38 T293 42 T390 34 V96 Z" fill="var(--mist)" />
+        <path d="M0 53 Q48 33 97 49 T195 47 T293 51 T390 43" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.85" strokeWidth="1.4" strokeDasharray="5 6" strokeLinecap="round" />
       </svg>
 
       {/* Create:奶油黄圆 + 号(示意图 CTA) */}
-      <div style={{ position: "absolute", left: "var(--screen-x)", bottom: 26, zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <div style={{ position: "absolute", left: "var(--screen-x)", bottom: "max(26px, env(safe-area-inset-bottom))", zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <button
           onClick={onNewStory}
           aria-label="Create the sandplay"
@@ -361,12 +349,12 @@ export default function F1Home({
             width: 58,
             height: 58,
             borderRadius: "50%",
-            background: "#FFD86A",
-            boxShadow: "0 6px 16px rgba(23,60,84,0.20), inset 0 2px 0 rgba(255,255,255,0.5)",
+            background: "var(--butter)",
+            boxShadow: "0 5px 0 var(--butter-under), var(--lift-2)",
             transition: "transform 160ms var(--ease-soft)",
           }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2F9FC8" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
@@ -389,7 +377,7 @@ export default function F1Home({
             width: 116,
             height: 20,
             borderRadius: "50%",
-            background: "rgba(23,60,84,0.12)",
+            background: "rgba(23,106,145,0.12)",
             filter: "blur(4px)",
           }}
         />

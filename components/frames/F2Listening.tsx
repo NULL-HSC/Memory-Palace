@@ -123,7 +123,7 @@ export default function F2Listening({
         </span>
       </div>
 
-      {/* 转写区：纯输入界面的主角；落定 ink / in-flight #9FC3D4 */}
+      {/* 转写区：纯输入界面的主角；落定 ink / in-flight var(--ink-blue) */}
       <div style={{ marginTop: 34, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
         <span className="meta-italic">{typeMode ? "Typing" : recording ? "Listening" : "Ready"}</span>
         {typeMode ? (
@@ -184,23 +184,23 @@ export default function F2Listening({
             width: 84,
             height: 84,
             borderRadius: "50%",
-            background: "var(--accent)",
-            boxShadow: "0 8px 22px rgba(23,60,84,0.24)",
+            background: "var(--sky)",
+            boxShadow: "0 5px 0 var(--sky-under), var(--lift-2)",
           }}
         >
           {/* 录音中视觉态：外圈双涟漪（复用 listen keyframes） */}
           {recording && !typeMode && (
             <>
-              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(242,103,79,0.45)", animation: "listen 1.8s ease-out infinite", pointerEvents: "none" }} />
-              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(242,103,79,0.45)", animation: "listen 1.8s ease-out 0.9s infinite", pointerEvents: "none" }} />
+              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid var(--coral)", animation: "listen 1.8s ease-out infinite", pointerEvents: "none" }} />
+              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid var(--coral)", animation: "listen 1.8s ease-out 0.9s infinite", pointerEvents: "none" }} />
             </>
           )}
           {recording ? (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M9.5 5.5v13M14.5 5.5v13" />
             </svg>
           ) : (
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
               <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
             </svg>
@@ -215,7 +215,7 @@ export default function F2Listening({
             textAlign: "left",
             fontSize: 14,
             fontStyle: "italic",
-            color: "#38657D",
+            color: "var(--ink)",
             opacity: canDone ? 1 : 0.35,
             transition: "opacity 300ms",
           }}

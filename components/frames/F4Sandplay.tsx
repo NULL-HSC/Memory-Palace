@@ -273,15 +273,14 @@ export default function F4Sandplay({
                 style={{
                   maxWidth: "76%",
                   padding: "9px 14px",
-                  borderRadius: "15px 4px 15px 15px",
-                  background: "rgba(47,159,200,0.92)",
-                  backdropFilter: "blur(8px)",
+                  borderRadius: "20px 20px 6px 20px",
+                  background: "var(--sky)",
                 }}
               >
                 {persona && (
-                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(255,255,255,0.8)", marginRight: 6 }}>{persona.name}</span>
+                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(18,85,113,0.65)", marginRight: 6 }}>{persona.name}</span>
                 )}
-                <span style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5, color: "var(--paper)" }}>{m.text}</span>
+                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--ink)" }}>{m.text}</span>
               </div>
               {persona && (
                 <span
@@ -289,7 +288,7 @@ export default function F4Sandplay({
                     width: 30,
                     height: 30,
                     borderRadius: "50%",
-                    background: "#EAF6FA",
+                    background: "var(--mist)",
                     overflow: "hidden",
                     flexShrink: 0,
                     display: "block",
@@ -324,9 +323,9 @@ export default function F4Sandplay({
               alignSelf: "center",
               padding: "8px 16px",
               borderRadius: 999,
-              background: "rgba(255,255,255,0.78)",
-              border: "1px solid rgba(217,238,244,0.9)",
-              backdropFilter: "blur(6px)",
+              background: "var(--raised)",
+              border: "none",
+              boxShadow: "var(--lift-1)",
               fontSize: 12.5,
               fontStyle: "italic",
               color: "var(--readable)",
@@ -347,15 +346,14 @@ export default function F4Sandplay({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(255,249,238,0.42)",
-            backdropFilter: "blur(3px)",
+            background: "rgba(255,249,238,0.88)",
             zIndex: 20,
           }}
         >
           <div
             style={{
               width: 300,
-              background: "rgba(255,255,255,0.95)",
+              background: "var(--raised)",
               borderRadius: 20,
               padding: "26px 22px 18px",
               textAlign: "center",
@@ -369,16 +367,10 @@ export default function F4Sandplay({
             </div>
             <button
               onClick={() => (onKeep ? onKeep() : onBack())}
-              style={{
-                width: "100%",
-                height: 48,
-                borderRadius: 24,
-                background: "var(--accent)",
-                boxShadow: "var(--shadow-button)",
-                marginTop: 18,
-              }}
+              className="btn"
+              style={{ width: "100%", marginTop: 18 }}
             >
-              <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--paper)" }}>
+              <span>
                 {onKeep ? "Keep this story" : "Leave the room"}
               </span>
             </button>
@@ -404,15 +396,14 @@ export default function F4Sandplay({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(255,249,238,0.42)",
-            backdropFilter: "blur(3px)",
+            background: "rgba(255,249,238,0.88)",
             zIndex: 30,
           }}
         >
           <div
             style={{
               width: 300,
-              background: "rgba(255,255,255,0.95)",
+              background: "var(--raised)",
               borderRadius: 20,
               padding: "26px 22px 18px",
               textAlign: "center",
@@ -429,16 +420,10 @@ export default function F4Sandplay({
                 setShowLeave(false);
                 onKeep?.();
               }}
-              style={{
-                width: "100%",
-                height: 48,
-                borderRadius: 24,
-                background: "var(--accent)",
-                boxShadow: "var(--shadow-button)",
-                marginTop: 18,
-              }}
+              className="btn"
+              style={{ width: "100%", marginTop: 18 }}
             >
-              <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--paper)" }}>Keep it</span>
+              <span>Keep it</span>
             </button>
             <button
               onClick={() => {
@@ -460,7 +445,7 @@ export default function F4Sandplay({
           left: 0,
           right: 0,
           bottom: 0,
-          padding: "26px 16px 26px",
+          padding: "26px 16px max(26px, env(safe-area-inset-bottom))",
           background: "linear-gradient(0deg, rgba(255,249,238,0.9) 30%, rgba(255,249,238,0) 100%)",
           zIndex: 11,
         }}
@@ -473,9 +458,8 @@ export default function F4Sandplay({
             height: 52,
             padding: "0 8px 0 20px",
             borderRadius: 26,
-            background: "rgba(255,255,255,0.86)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(169,212,226,0.55)",
+            background: "var(--raised)",
+            border: "1px solid var(--line)",
             boxShadow: "var(--shadow-input)",
           }}
         >
@@ -496,8 +480,8 @@ export default function F4Sandplay({
             }}
           />
           <button onClick={send} aria-label="Send" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, flexShrink: 0 }}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "var(--accent)" }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "var(--butter)", boxShadow: "0 3px 0 var(--butter-under)" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" />
               </svg>
             </span>
@@ -527,16 +511,15 @@ function DanmakuBubble({
         style={{
           maxWidth: "80%",
           padding: "8px 13px",
-          borderRadius: "4px 15px 15px 15px",
-          background: "rgba(255,255,255,0.82)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(217,238,244,0.9)",
+          borderRadius: "20px 20px 20px 6px",
+          background: "var(--raised)",
+          boxShadow: "var(--lift-1)",
         }}
       >
         <span style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--readable)", marginRight: 6 }}>
           {speaker?.name ?? "…"}
         </span>
-        <span style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5 }}>
+        <span aria-live="polite" style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5 }}>
           {streamingText != null ? <TypeText text={streamingText} speed={26} onDone={onStreamDone} /> : text}
         </span>
       </div>
@@ -555,10 +538,9 @@ function PersonaTyping({ speaker }: { speaker?: Persona }) {
           alignItems: "center",
           gap: 5,
           padding: "13px 15px",
-          borderRadius: "4px 15px 15px 15px",
-          background: "rgba(255,255,255,0.82)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(217,238,244,0.9)",
+          borderRadius: "20px 20px 20px 6px",
+          background: "var(--raised)",
+          boxShadow: "var(--lift-1)",
         }}
       >
         {[0, 1, 2].map((i) => (
@@ -569,7 +551,7 @@ function PersonaTyping({ speaker }: { speaker?: Persona }) {
               width: 5,
               height: 5,
               borderRadius: "50%",
-              background: "#9FC3D4",
+              background: "rgba(47,159,200,0.5)",
               animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
             }}
           />
@@ -587,7 +569,7 @@ function PersonaAvatar({ speaker, size }: { speaker?: Persona; size: number }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: "#EAF6FA",
+        background: "var(--mist)",
         flexShrink: 0,
         overflow: "hidden",
         display: "block",

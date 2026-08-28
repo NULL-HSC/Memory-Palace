@@ -50,7 +50,7 @@ export default function F5Spaces({ onBack }: { onBack: () => void }) {
               key={id}
               onClick={() => setToast(`${c.name}'s room is still being tidied — check back soon.`)}
               style={{
-                background: "#FFFFFF",
+                background: "var(--raised)",
                 border: "1px solid var(--line)",
                 padding: "8px 8px 14px",
                 boxShadow: "var(--shadow-card)",

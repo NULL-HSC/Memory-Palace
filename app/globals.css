@@ -1,48 +1,143 @@
 /* ============================================================
-   理理理 · Design Tokens —— 晴空蓝剪贴簿色系（美术 2026-08 更新）
-   比例：奶油纸 45% / 雾蓝 20% / 天蓝 15% / 故事蓝 10% / 奶油黄 7% / 墨蓝 3% / 珊瑚点缀
+   理理理 · Design Tokens —— My Stories Color System(签署版)
+   规范来源:docs/style-kit/(DESIGN-GUIDELINE.md + tokens.css)
+   tokens.css 是颜色/字体/间距/动效的唯一出处;下方"legacy 别名"
+   仅为旧类名兼容,取值一律引用 kit token,不新增 hex。
    ============================================================ */
-:root {
-  /* colour */
-  --paper: #fff9ee; /* 屏背景 · cream paper */
-  --sunken: #eaf6fa; /* archive / transcript 面板 · mist blue 浅调 */
-  --raised: #ffffff; /* mounts、气泡、卡片、输入栏 */
-  --accent: #f2674f; /* 主按钮、+ badge、进度 · coral 点缀 */
-  --ink: #176a91; /* 标题、正文 · ink blue */
-  --ink-2: #38657d; /* 转写正文 */
-  --muted: #4e86a6; /* 标签、链接、active dot · story blue 降调 */
-  --faint: #7fa9be; /* meta italic、speaker 名 */
-  --placeholder: #9fc3d4; /* 输入占位 */
-  --readable: #3d6e8c; /* §8 a11y：需阅读的弱色统一加深到 ≈4.6:1 */
-  --line: #d9eef4; /* mount 边、进度轨 · mist blue */
-  --line-strong: #a9d4e2; /* 可编辑字段下划线 */
-  --slot-fill: #edf7fa; /* 空 mount 内芯 */
-  --slot-border: #a9d4e2; /* 空 mount 虚线边 1.5px */
-  --sand: #d9eef4; /* sandplay 沙盘底 · mist blue */
-  --sand-2: #c2e4ee; /* 沙盘丘 */
-  --foliage: #9ad9e9; /* 沙盘灌木 · clear sky 浅调 */
-  --avatar-field: #eaf6fa; /* 勋章内芯 */
-  --badge: #2f9fc8; /* 计数 pill · story blue */
-  --chevron: #176a91;
-  --inflight: #9fc3d4; /* 转写 in-flight 尾句 */
 
-  /* geometry（§2 Geometry） */
-  --screen-x: 24px;
+/* 自托管字体(签署栈:Shantell Sans 标题手写 + Quicksand 正文;
+   CJK 无字形覆盖,标题里中文回落 PingFang SC 700 —— kit §2.2) */
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("/fonts/ShantellSans-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("/fonts/ShantellSans-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Shantell Sans";
+  src: url("/fonts/ShantellSans-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Quicksand";
+  src: url("/fonts/Quicksand-500.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Quicksand";
+  src: url("/fonts/Quicksand-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Quicksand";
+  src: url("/fonts/Quicksand-700.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  /* ---- 签署色板(七色,不得新增品牌色) ---- */
+  --cream: #fff9ee; /* Cream Paper · 45% */
+  --mist: #d9eef4; /* Mist Blue · 20% */
+  --sky: #8ed4e8; /* Clear Sky · 15% */
+  --story: #2f9fc8; /* Story Blue · 10% · 只做描边/填充,不承载文字 */
+  --butter: #ffd86a; /* Butter Yellow · 7% · 主按钮 */
+  --ink-blue: #176a91; /* Ink Blue · 3% · 手写标题/ribbon */
+  --coral: #f2674f; /* 点缀专用,≤24px,不做文字底 */
+
+  /* ---- 派生(结构性,非品牌色) ---- */
+  --ink: #125571; /* Deep Ink:所有 <19px 文字,cream 上 7.82:1 */
+  --butter-under: #e9b84a; /* butter 控件硬底边 */
+  --sky-under: var(--story); /* sky 控件硬底边 */
+
+  /* ---- 文字角色 ---- */
+  --text: var(--ink);
+  --text-large: var(--ink-blue); /* ≥19px 手写标题专用 */
+  --text-on-ink: var(--cream);
+  --text-on-sky: var(--ink);
+  --text-on-butter: var(--ink);
+  --text-on-mist: var(--ink);
+
+  /* ---- 表面:cream 既是地面也是卡面,层级靠阴影不靠更白的填充 ---- */
+  --ground: var(--cream);
+  --raised: var(--cream);
+  --sunken: var(--mist);
+
+  /* ---- 圆角 ---- */
+  --r-pill: 999px;
+  --r-card: 28px;
+  --r-panel: 22px;
+  --r-chip: 16px;
+  --r-photo: 6px; /* 唯一近直角:相框内照片 */
+
+  /* ---- 阴影:墨蓝调,禁止灰/黑 ---- */
+  --lift-1: 0 3px 10px rgba(23, 106, 145, 0.12);
+  --lift-2: 0 8px 20px rgba(23, 106, 145, 0.16);
+  --lift-3: 0 16px 34px rgba(23, 106, 145, 0.2);
+  --press-butter: 0 4px 0 var(--butter-under);
+  --press-sky: 0 4px 0 var(--sky-under);
+
+  /* ---- 字体 ---- */
+  --font-hand: "Shantell Sans", "PingFang SC", "Comic Sans MS", cursive;
+  --font-ui: "Quicksand", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --t-display: 30px;
+  --t-title: 22px;
+  --t-lead: 19px; /* 按钮 19px/700:大字号对比度阈值,不得下调 */
+  --t-body: 15px;
+  --t-label: 13px;
+  --t-micro: 11px;
+
+  /* ---- 间距(4px 基) ---- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;
+
+  --screen-x: 20px;
   --screen-top: 54px;
   --screen-bottom: 34px;
+  --tabbar-h: 96px;
 
-  /* elevation —— shadow colour rgba(23,60,84,α) 冷蓝投影 */
-  --shadow-print-mid: 0 6px 16px rgba(23, 60, 84, 0.09);
-  --shadow-print-focus: 0 18px 38px rgba(23, 60, 84, 0.19);
-  --shadow-print-review: 0 12px 28px rgba(23, 60, 84, 0.14);
-  --shadow-button: 0 6px 16px rgba(23, 60, 84, 0.18);
-  --shadow-input: 0 3px 10px rgba(23, 60, 84, 0.06);
-  --shadow-card: 0 4px 12px rgba(23, 60, 84, 0.07);
-  --shadow-tray: inset 0 2px 10px rgba(46, 109, 140, 0.14);
+  /* ---- 动效 ---- */
+  --ease-soft: cubic-bezier(0.34, 0.8, 0.38, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-fan: cubic-bezier(0.32, 0.72, 0.32, 1); /* 扇形翻牌专属(保留) */
+  --dur-tap: 140ms;
+  --dur-move: 320ms;
 
-  /* motion（§3.2 建议曲线） */
-  --ease-fan: cubic-bezier(0.32, 0.72, 0.32, 1);
-  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* ================= legacy 别名(引用 kit token,不新增色值) ================= */
+  --paper: var(--cream);
+    --accent: var(--coral); /* 只做聚焦框/点缀;按钮填充一律用 .btn(butter) */
+  --ink-2: var(--ink);
+  --muted: var(--ink);
+  --faint: rgba(18, 85, 113, 0.55);
+  --placeholder: rgba(18, 85, 113, 0.45);
+  --readable: var(--ink);
+  --line: var(--mist);
+  --line-strong: var(--sky-under);
+  --slot-fill: var(--mist);
+  --slot-border: var(--sky-under);
+  --sand: var(--mist);
+  --sand-2: rgba(47, 159,Flight 200, 0.35); /* 沙丘第二层:mist 上的 story 罩色 */
+  --foliage: var(--sky);
+  --avatar-field: var(--mist);
+  --badge: var(--ink-blue);
+  --chevron: var(--ink-blue);
+  --inflight: var(--ink-blue); /* kit §6.2:in-flight 文字用 ink-blue,不用浅灰 */
+  --shadow-print-mid: var(--lift-1);
+  --shadow-print-focus: var(--lift-3);
+  --shadow-print-review: var(--lift-2);
+  --shadow-button: var(--lift-1);
+  --shadow-input: var(--lift-1);
+  --shadow-card: var(--lift-1);
+  --shadow-tray: inset 0 2px 10px rgba(23, 106, 145, 0.14);
 }
 
 * {
@@ -57,17 +152,11 @@ body {
   height: 100%;
 }
 
-/* 中文可爱手写体:小赖字体(拉丁仍走 Newsreader,中文回落手写) */
-@font-face {
-  font-family: "XiaolaiSC";
-  src: url("/fonts/XiaolaiSC-Regular.ttf") format("truetype");
-  font-display: swap;
-}
-
 body {
-  font-family: var(--font-display), "XiaolaiSC", Georgia, "Songti SC", serif;
-  color: var(--ink);
-  background: var(--paper);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--text);
+  background: var(--ground);
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -88,7 +177,7 @@ textarea {
 }
 
 /* ============================================================
-   App shell —— 390×844 逻辑基准；桌面下居中套灰底框（同 mockup 呈现）
+   App shell —— 桌面居中套框;移动端撑满视口(不用固定 390×844)
    ============================================================ */
 .app-shell {
   position: relative;
@@ -97,29 +186,50 @@ textarea {
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background: var(--paper);
+  background: var(--ground);
+}
+
+/* 纸纹:永远在最上层、永远不响应指针(kit §3) */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
+}
+
+/* 格子布纹:表示"空白待填",只用于空槽位(kit §3) */
+.gingham {
+  background-color: var(--cream);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(47, 159, 200, 0.26) 0 13px, transparent 13px 26px),
+    repeating-linear-gradient(90deg, rgba(47, 159, 200, 0.26) 0 13px, transparent 13px 26px);
 }
 
 @media (min-width: 480px) {
   body {
     display: grid;
     place-items: center;
-    background: #dcebf2;
+    background: var(--mist);
   }
   .app-shell {
     width: 390px;
     height: min(844px, 96dvh);
-    box-shadow: 0 24px 80px rgba(23, 60, 84, 0.22);
+    box-shadow: var(--lift-3);
+    border-radius: var(--r-card);
   }
 }
 
-/* frame 容器与软进出场（无硬切） */
+/* frame 容器与软进出场(无硬切) */
 .frame {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--screen-top) var(--screen-x) var(--screen-bottom);
+  padding: var(--screen-top) var(--screen-x) max(var(--screen-bottom), env(safe-area-inset-bottom));
 }
 .frame-enter {
   animation: frameIn 360ms var(--ease-fan) both;
@@ -128,24 +238,12 @@ textarea {
   animation: frameInLeft 360ms var(--ease-fan) both;
 }
 @keyframes frameIn {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes frameInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ============================================================
@@ -163,33 +261,107 @@ textarea {
   font-weight: 500;
 }
 .nav-side {
-  min-width: 44px; /* §8：44px 触控区 */
+  min-width: 44px; /* 44px 触控区 */
   min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
 .back-chevron {
   color: var(--chevron);
-  margin-left: -12px; /*  glyph 视觉对齐 24px gutter，触控区仍 44px */
+  margin-left: -12px;
   justify-content: flex-start;
+}
+
+/* ribbon:屏级标题牌,右端缺口,绝不用素矩形(kit §5) */
+.ribbon {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 26px 0 18px;
+  background: var(--ink-blue);
+  color: var(--text-on-ink);
+  font-family: var(--font-hand);
+  font-size: var(--t-title);
+  font-weight: 600;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
 }
 
 .meta-italic {
   font-style: italic;
   font-size: 12.5px;
-  font-weight: 300;
-  color: var(--readable); /* §8：日期/说明等需阅读文本加深 */
+  font-weight: 500;
+  color: var(--readable);
 }
 
 .count-pill {
   font-size: 12px;
-  color: #ffffff;
+  color: var(--text-on-ink);
   background: var(--badge);
   border-radius: 9px;
   padding: 1px 8px;
 }
 
-/* shimmer —— 加载永不黑屏（理理理.md §4） */
+/* ============================================================
+   kit 组件配方(类名即契约,来自 docs/style-kit/components.css)
+   ============================================================ */
+
+/* 可按压物:有"硬底边"的厚块,按下时压到底边上 —— 不用透明度变化代替 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 48px;
+  padding: 0 var(--s-6);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--butter);
+  box-shadow: var(--press-butter);
+  color: var(--text-on-butter);
+  font-family: var(--font-ui);
+  font-size: var(--t-lead);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--dur-tap) var(--ease-soft), box-shadow var(--dur-tap) var(--ease-soft);
+}
+.btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--butter-under);
+}
+.btn--sky {
+  background: var(--sky);
+  box-shadow: var(--press-sky);
+  color: var(--text-on-sky);
+}
+.btn--sky:active {
+  box-shadow: 0 0 0 var(--sky-under);
+}
+/* kit 未给 disabled 配方(迁移清单 §6 补充):保留下压边,降透明且不可点 */
+.btn:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* 圆形 disc:加号/麦克风一类的大圆按钮 */
+.disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--butter);
+  box-shadow: 0 5px 0 var(--butter-under), var(--lift-2);
+  color: var(--ink-blue);
+  cursor: pointer;
+  transition: transform var(--dur-tap) var(--ease-bounce);
+}
+.disc:active {
+  transform: translateY(5px) scale(0.97);
+}
+
+/* shimmer —— 加载永不黑屏 */
 .shimmer {
   position: relative;
   overflow: hidden;
@@ -198,145 +370,93 @@ textarea {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.55) 50%, transparent 80%);
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 249, 238, 0.55) 50%, transparent 80%);
   background-size: 220% 100%;
   animation: shimmerSweep 2.2s linear infinite;
 }
 @keyframes shimmerSweep {
-  from {
-    background-position: 180% 0;
-  }
-  to {
-    background-position: -80% 0;
-  }
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
 }
 
 /* ============================================================
-   Motion —— handoff §6：全 ambient、全 CSS、全 infinite
+   Motion —— 全 ambient、全 CSS、prefers-reduced-motion 守卫
    ============================================================ */
 @keyframes bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
 }
 .anim-bob {
-  animation: bob 3.6s ease-in-out infinite;
+  animation: bob 3.6s var(--ease-soft) infinite;
 }
 
 @keyframes sway {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 .anim-sway {
-  animation: sway 4s ease-in-out infinite;
+  animation: sway 4s var(--ease-soft) infinite;
+}
+
+@keyframes pop {
+  from { transform: scale(0.86); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.is-pop {
+  animation: pop var(--dur-move) var(--ease-bounce) both;
 }
 
 @keyframes listen {
-  0% {
-    transform: scale(0.86);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1.28);
-    opacity: 0;
-  }
+  0% { transform: scale(0.86); opacity: 0.7; }
+  100% { transform: scale(1.28); opacity: 0; }
 }
 
 @keyframes talk {
-  0%,
-  100% {
-    transform: scaleY(0.35);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
 }
 
 @keyframes think {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 
 @keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 .anim-blink {
   animation: blink 1.1s step-end infinite;
 }
 
-/* 前置卡：缓慢浮动（选中态强调） */
 @keyframes floatSoft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 .anim-float {
-  animation: floatSoft 4.2s ease-in-out infinite;
+  animation: floatSoft 4.2s var(--ease-soft) infinite;
 }
 
 @keyframes nod {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  35% {
-    transform: translateY(4px);
-  }
-  70% {
-    transform: translateY(-2px);
-  }
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(4px); }
+  70% { transform: translateY(-2px); }
 }
 .anim-nod {
   animation: nod 800ms var(--ease-soft) 1;
 }
 
 @keyframes bubbleIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 12px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* 转写：落定 / in-flight（§4.2） */
+/* 转写:落定 / in-flight(kit §6.2:in-flight 用 ink-blue) */
 .word-final {
   color: var(--ink);
   transition: color 400ms ease;
@@ -362,11 +482,11 @@ button:focus {
   outline: none;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--story);
+  outline-offset: 3px;
+  border-radius: var(--r-chip);
 }
 
-/* §6：mockup 没做，build 里必须做 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

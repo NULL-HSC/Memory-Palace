@@ -71,7 +71,7 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
   }, [sessionId]);
 
   return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "#EAF6FA" }}>
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: "var(--mist)" }}>
       {/* ══ 场景(占位静帧 · 后续换 AIGC 视频):就绪后 crossfade 进场 ══ */}
       <div
         style={{
@@ -105,29 +105,29 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
         >
           <defs>
             <linearGradient id="skyV" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FFF9EE" />
-              <stop offset="45%" stopColor="#D9EEF4" />
-              <stop offset="100%" stopColor="#AEE0EF" />
+              <stop offset="0%" stopColor="var(--cream)" />
+              <stop offset="45%" stopColor="var(--mist)" />
+              <stop offset="100%" stopColor="var(--sky)" />
             </linearGradient>
             <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0%" stopColor="#FFD86A" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#FFD86A" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--butter)" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="var(--butter)" stopOpacity="0" />
             </radialGradient>
           </defs>
           <rect width="390" height="844" fill="url(#skyV)" />
           {/* 低垂暖阳 */}
           <circle cx="312" cy="168" r="86" fill="url(#sunGlow)" />
-          <circle cx="312" cy="168" r="34" fill="#FFE49A" opacity="0.9" />
+          <circle cx="312" cy="168" r="34" fill="var(--butter)" opacity="0.9" />
           {/* 远景山脊 */}
-          <path d="M0 420 Q80 372 170 404 T390 388 V844 H0 Z" fill="#C2E4EE" opacity="0.8" />
-          <path d="M0 470 Q110 430 220 458 T390 446 V844 H0 Z" fill="#A9D4E2" opacity="0.9" />
+          <path d="M0 420 Q80 372 170 404 T390 388 V844 H0 Z" fill="var(--mist)" opacity="0.8" />
+          <path d="M0 470 Q110 430 220 458 T390 446 V844 H0 Z" fill="var(--sky)" opacity="0.9" />
           {/* 中景灌木剪影 */}
-          <path d="M-20 560 Q30 500 76 548 Q104 520 128 556 Q160 536 168 580 L168 640 L-20 640 Z" fill="#8ED4E8" opacity="0.75" />
-          <path d="M410 552 Q356 496 316 550 Q288 524 268 560 Q238 542 232 584 L232 640 L410 640 Z" fill="#8ED4E8" opacity="0.75" />
+          <path d="M-20 560 Q30 500 76 548 Q104 520 128 556 Q160 536 168 580 L168 640 L-20 640 Z" fill="var(--sky)" opacity="0.75" />
+          <path d="M410 552 Q356 496 316 550 Q288 524 268 560 Q238 542 232 584 L232 640 L410 640 Z" fill="var(--sky)" opacity="0.75" />
           {/* 近景地面与沙丘 */}
           <path d="M0 600 Q120 560 230 592 T390 584 V844 H0 Z" fill="var(--sand-2)" />
-          <ellipse cx="195" cy="760" rx="230" ry="72" fill="#EAF6FA" opacity="0.85" />
-          <ellipse cx="195" cy="700" rx="90" ry="18" fill="#D9EEF4" opacity="0.8" />
+          <ellipse cx="195" cy="760" rx="230" ry="72" fill="var(--mist)" opacity="0.85" />
+          <ellipse cx="195" cy="700" rx="90" ry="18" fill="var(--mist)" opacity="0.8" />
         </svg>
 
         {/* 萤火/光尘:环境微动,低对比不抢注意力 */}
@@ -142,7 +142,7 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
               width: 5,
               height: 5,
               borderRadius: "50%",
-              background: "#FFD86A",
+              background: "var(--butter)",
               animation: `think ${3.2 + i * 0.7}s ease-in-out ${i * 0.9}s infinite`,
             }}
           />
@@ -201,7 +201,7 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(170deg, #FFF9EE, #D9EEF4)",
+            background: "linear-gradient(170deg, var(--cream), var(--mist))",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -233,13 +233,13 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: "#7FA9BE",
+                  background: "var(--story)",
                   animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
                 }}
               />
             ))}
           </div>
-          <span className="meta-italic" style={{ color: "#4E86A6", fontSize: 13.5 }}>
+          <span className="meta-italic" style={{ color: "var(--ink-blue)", fontSize: 13.5 }}>
             staging the scene…
           </span>
         </div>
@@ -255,10 +255,9 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
             padding: "5px 12px",
             borderRadius: 999,
             background: "rgba(255,255,255,0.72)",
-            backdropFilter: "blur(6px)",
             fontSize: 12,
             fontStyle: "italic",
-            color: "#4E86A6",
+            color: "var(--ink-blue)",
             zIndex: 4,
           }}
         >

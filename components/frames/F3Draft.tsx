@@ -83,7 +83,7 @@ export default function F3Draft({
       <div style={{ marginTop: 26, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10, borderBottom: "1px solid var(--line-strong)", paddingBottom: 10 }}>
           {titleLoading ? (
-            <div className="shimmer" style={{ height: 32, flex: 1, background: "rgba(159,195,212,0.25)" }} />
+            <div className="shimmer" style={{ height: 32, flex: 1, background: "var(--mist)" }} />
           ) : (
             <input
               value={title}
@@ -104,7 +104,7 @@ export default function F3Draft({
               }}
             />
           )}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7FA9BE" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 7, flexShrink: 0 }} aria-hidden>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 7, flexShrink: 0 }} aria-hidden>
             <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
           </svg>
         </div>
@@ -127,14 +127,14 @@ export default function F3Draft({
                   flex: 1,
                   padding: "12px 6px 10px",
                   borderRadius: 16,
-                  border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
+                  border: selected ? "1.5px solid var(--ink-blue)" : "1px solid var(--line)",
+                  background: selected ? "var(--mist)" : "var(--raised)",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: 15, fontWeight: 500, color: selected ? "var(--accent)" : "var(--ink)" }}>
+                <div style={{ fontSize: 15, fontWeight: 500, color: selected ? "var(--ink-blue)" : "var(--ink)" }}>
                   {opt.label}
                 </div>
                 <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--readable)", marginTop: 3 }}>
@@ -176,20 +176,10 @@ export default function F3Draft({
             visibility,
           })
         }
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "100%",
-          height: 54,
-          borderRadius: 27,
-          background: "var(--accent)",
-          boxShadow: "var(--shadow-button)",
-          marginTop: 22,
-          flexShrink: 0,
-        }}
+        className="btn"
+        style={{ width: "100%", marginTop: 22, flexShrink: 0 }}
       >
-        <span style={{ fontSize: 17, fontWeight: 500, color: "var(--paper)" }}>Keep this story</span>
+        <span>Keep this story</span>
       </button>
     </div>
   );

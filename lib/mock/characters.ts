@@ -8,42 +8,42 @@ export const CHARACTERS: Character[] = [
     name: "Pico",
     species: "dog",
     personality: "温暖、稳定、陪伴感；先接住情绪再给回应；用户最熟的声音",
-    color: "#D9EEF4",
+    color: "var(--mist)",
   },
   {
     id: "mira",
     name: "Mira",
     species: "cat",
     personality: "敏锐、温和地追问；擅长问出“谁允许的？”这类问题",
-    color: "#EAF6FA",
+    color: "var(--mist)",
   },
   {
     id: "renn",
     name: "Renn",
     species: "kitten",
     personality: "智慧的 reframer；把自责重新框架（“房间没有拒绝你”）",
-    color: "#FFE9B0",
+    color: "rgba(255,216,106,0.45)",
   },
   {
     id: "tola",
     name: "Tola",
     species: "raccoon",
     personality: "柔软、肯定型；负责拥抱和兜底",
-    color: "#DCDFF0",
+    color: "var(--mist)",
   },
   {
     id: "sena",
     name: "Sena",
     species: "bunny",
     personality: "轻快、好奇；带来小视角和小惊喜",
-    color: "#FFF4D6",
+    color: "rgba(255,216,106,0.3)",
   },
   {
     id: "ivo",
     name: "Ivo",
     species: "rabbit", // 新美术是绿兔(和 Sena 的粉兔区分);README 记录的"鸭/owl"素材问题随黏土风美术替换消解
     personality: "冷静的观察者；给结构化的小洞察",
-    color: "#C2E4EE",
+    color: "var(--mist)",
   },
 ];
 
