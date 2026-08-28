@@ -62,7 +62,14 @@ export default function PickRole({
 
       {/* 引导语 */}
       <div style={{ marginTop: 34, flexShrink: 0 }}>
-        <span className="meta-italic">Three voices were in this story</span>
+        {/* 文案按实际提取到的角色数走,不写死(用户说得少时可能只有一两个) */}
+        <span className="meta-italic">
+          {personas === null
+            ? "Listening for the voices in this story"
+            : personas.length === 1
+              ? "One voice was in this story"
+              : `${["", "One", "Two", "Three"][personas.length] ?? personas.length} voices were in this story`}
+        </span>
         <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.3, marginTop: 8 }}>
           Who do you want to step in as?
         </div>
