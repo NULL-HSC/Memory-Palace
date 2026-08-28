@@ -53,7 +53,7 @@ function Shell() {
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("frame");
     if (!f) return;
-    if (f === "draft") setTranscript(MOCK_TRANSCRIPT);
+    if (f === "draft" || f === "pick") setTranscript(MOCK_TRANSCRIPT);
     if (f !== "home") setFrame(f as Frame);
   }, []);
 

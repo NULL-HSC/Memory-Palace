@@ -57,6 +57,7 @@ export default function F4Sandplay({
   const [streaming, setStreaming] = useState<SpeakerTurn | null>(null);
   const [input, setInput] = useState("");
   const [showEnd, setShowEnd] = useState(false); // 三轮无互动 → 结束弹窗
+  const [llmError, setLlmError] = useState<{ mode: TurnMode; speakers: string[]; after: () => void; userMessage?: string } | null>(null); // 最近失败的一轮,给弹幕区重试入口
 
   const queueRef = useRef<SpeakerTurn[]>([]);
   const runningRef = useRef(false);
@@ -104,7 +105,7 @@ export default function F4Sandplay({
     runningRef.current = false;
   }
 
-  /** 跑一轮 LLM 发言;失败只记日志、节奏继续(全真实模式,不塞假数据) */
+  /** 跑一轮 LLM 发言;失败在弹幕区给重试入口、节奏继续(全真实模式,不塞假数据) */
   async function runRound(mode: TurnMode, speakers: string[], after: () => void, userMessage?: string) {
     try {
       const turns = await runTurn(mode, speakers, {
@@ -117,15 +118,25 @@ export default function F4Sandplay({
         userMessage,
       });
       if (!aliveRef.current) return;
+      setLlmError(null);
       if (turns.length > 0) {
         queueRef.current.push(...turns);
         await pump();
       }
     } catch (e) {
       console.error(`[sandplay] ${mode} 轮 LLM 调用失败:`, e);
+      if (aliveRef.current) setLlmError({ mode, speakers, after, userMessage });
     }
     if (aliveRef.current) after();
   }
+
+  /** 重试最近失败的一轮(after 闭包原样带上,节奏计时会被 armTimer 去重) */
+  const retryRound = () => {
+    const r = llmError;
+    if (!r) return;
+    setLlmError(null);
+    void runRound(r.mode, r.speakers, r.after, r.userMessage);
+  };
 
   /* 沉默期推进:continue → invite → 结束弹窗 */
   function stepContinue() {
@@ -147,6 +158,7 @@ export default function F4Sandplay({
     setStreaming(null);
     setTypingId(null);
     setShowEnd(false);
+    setLlmError(null);
     void runRound("opening", aiSpeakersRef.current, waitForUser);
     return () => {
       aliveRef.current = false;
@@ -276,6 +288,26 @@ export default function F4Sandplay({
           />
         )}
         {typingId && <PersonaTyping speaker={personaById(typingId)} />}
+        {/* LLM 轮失败:不再是"死一样的安静",给一条可点重试的轻提示 */}
+        {llmError && (
+          <button
+            onClick={retryRound}
+            style={{
+              alignSelf: "center",
+              padding: "8px 16px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.78)",
+              border: "1px solid rgba(217,238,244,0.9)",
+              backdropFilter: "blur(6px)",
+              fontSize: 12.5,
+              fontStyle: "italic",
+              color: "var(--readable)",
+              animation: "bubbleIn 300ms var(--ease-soft) both",
+            }}
+          >
+            the room lost its voice · tap to retry
+          </button>
+        )}
       </div>
 
       {/* ══ 三轮无互动 → 结束弹窗 ══ */}

@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const raw = await chat(cfg, { keyIndex: 0, system: SYSTEM, user: transcript, maxTokens: 2000 });
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    // 容错:模型偶尔在 JSON 外包 markdown 或带前后缀废话,截取首个 { 到末个 } 再解析
+    const text = raw.replace(/```json|```/g, "").trim();
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end <= start) throw new Error("LLM 返回不含 JSON");
+    const parsed = JSON.parse(text.slice(start, end + 1));
     const list = Array.isArray(parsed?.personas) ? parsed.personas : [];
     const personas = list.slice(0, 3).map((p: Record<string, unknown>, i: number) => ({
       id: `per-${i + 1}`,

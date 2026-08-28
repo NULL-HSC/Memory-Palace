@@ -44,7 +44,7 @@ export default function F1Home({
   const maxOffset = Math.max(stories.length - 1, 0);
 
   const offsetRef = useRef(0);
-  const dragRef = useRef({ startX: 0, startOffset: 0, moved: 0, active: false });
+  const dragRef = useRef({ startX: 0, startOffset: 0, moved: 0, active: false, tapIdx: null as number | null });
   const rafRef = useRef(0);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const blankRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,16 @@ export default function F1Home({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    dragRef.current = { startX: e.clientX, startOffset: offsetRef.current, moved: 0, active: true };
+    // 记录按下的卡:容器 setPointerCapture 会把 click 重定向到容器,
+    // 卡片 onClick 永远收不到 → 点按改在 pointerUp 里按 tapIdx 分发
+    const cardEl = (e.target as HTMLElement).closest("[data-card-idx]");
+    dragRef.current = {
+      startX: e.clientX,
+      startOffset: offsetRef.current,
+      moved: 0,
+      active: true,
+      tapIdx: cardEl ? Number(cardEl.getAttribute("data-card-idx")) : null,
+    };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -104,6 +113,10 @@ export default function F1Home({
   const onPointerUp = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
+    if (dragRef.current.moved <= 8 && dragRef.current.tapIdx != null) {
+      handleCardTap(dragRef.current.tapIdx); // 点按:侧卡吸附 / 前置卡进沙盘
+      return;
+    }
     snapTo(Math.round(offsetRef.current));
   };
 
@@ -175,6 +188,7 @@ export default function F1Home({
             return (
               <div
                 key={s.id}
+                data-card-idx={i}
                 ref={(el) => {
                   if (el) cardRefs.current.set(s.id, el);
                   else cardRefs.current.delete(s.id);

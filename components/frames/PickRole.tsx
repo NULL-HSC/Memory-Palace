@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Persona } from "@/lib/types";
 import { prepareSandplay, type CreateSessionResponse } from "@/lib/api";
 
@@ -21,17 +21,23 @@ export default function PickRole({
   const [personas, setPersonas] = useState<Persona[] | null>(null);
   const [session, setSession] = useState<CreateSessionResponse | undefined>();
   const [picked, setPicked] = useState<string | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // 提取失败:不塞 mock,给重试 + 真实原因
+  const inflightRef = useRef<string | null>(null); // dev StrictMode 双挂会双发同一请求,按 transcript 去重
 
   const load = () => {
-    setFailed(null);
+    if (inflightRef.current === transcript) return;
+    inflightRef.current = transcript;
+    setError(null);
     setPersonas(null);
     prepareSandplay(transcript)
       .then((prepared) => {
         setPersonas(prepared.personas);
         setSession(prepared.session);
       })
-      .catch((error) => setFailed(error instanceof Error ? error.message : "Couldn’t prepare the story"));
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => {
+        if (inflightRef.current === transcript) inflightRef.current = null;
+      });
   };
 
   useEffect(() => {
@@ -64,10 +70,14 @@ export default function PickRole({
 
       {/* 人设卡列表 / 提取中加载态 / 失败重试 */}
       <div style={{ marginTop: 26, display: "flex", flexDirection: "column", gap: 12, flexShrink: 0 }}>
-        {failed ? (
+        {error !== null ? (
           <div style={{ textAlign: "center", padding: "26px 0" }}>
             <div className="meta-italic" style={{ fontSize: 13.5 }}>
-              {failed}
+              Couldn&rsquo;t read the story just now.
+            </div>
+            {/* 演示期调试:把真实失败原因露出来,方便区分 503 未配置 / 502 解析失败 / 网络 */}
+            <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
+              {error}
             </div>
             <button
               onClick={load}
@@ -108,7 +118,7 @@ export default function PickRole({
                   padding: "14px 16px",
                   borderRadius: 16,
                   border: selected ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                  background: selected ? "rgba(242,103,79,0.08)" : "#FFFFFF",
+                  background: selected ? "rgba(37,137,176,0.08)" : "#FFFFFF",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "left",

@@ -7,7 +7,7 @@
   --paper: #fff9ee; /* 屏背景 · cream paper */
   --sunken: #eaf6fa; /* archive / transcript 面板 · mist blue 浅调 */
   --raised: #ffffff; /* mounts、气泡、卡片、输入栏 */
-  --accent: #f2674f; /* 主按钮、+ badge、进度 · coral 点缀 */
+  --accent: #2589b0; /* 主按钮、+ badge、进度 · story blue(白字对比 ≈3.9:1,不再像 alert) */
   --ink: #176a91; /* 标题、正文 · ink blue */
   --ink-2: #38657d; /* 转写正文 */
   --muted: #4e86a6; /* 标签、链接、active dot · story blue 降调 */
