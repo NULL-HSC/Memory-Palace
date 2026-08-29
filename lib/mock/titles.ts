@@ -2,12 +2,12 @@
  *  风格：名词短语、有情绪余味、不剧透，参考 "A Day About Courage" */
 
 export const TITLE_POOL = [
-  "A Day of Almost-Gaps",
-  "The Tea I Carried All Day",
-  "Saying It to the Orange Sky",
-  "A Quiet Kind of Brave",
-  "One Block of Honesty",
-  "The Gap That Never Came",
+  "差一点就能开口的一天",
+  "端了一整天的那杯茶",
+  "说给橘色的天空听",
+  "安安静静的勇气",
+  "一个路口的真心话",
+  "一直没来的那个空隙",
 ];
 
 export function pickMockTitle(transcript: string): string {
@@ -16,26 +16,7 @@ export function pickMockTitle(transcript: string): string {
   return TITLE_POOL[idx];
 }
 
-/** 长日期格式："the twenty-sixth of August, 2026" */
+/** 长日期格式:"2026年8月26日" */
 export function longDate(d: Date): string {
-  const ord = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-  const ordinals: Record<number, string> = {
-    1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth", 6: "sixth",
-    7: "seventh", 8: "eighth", 9: "ninth", 10: "tenth", 11: "eleventh", 12: "twelfth",
-    13: "thirteenth", 14: "fourteenth", 15: "fifteenth", 16: "sixteenth",
-    17: "seventeenth", 18: "eighteenth", 19: "nineteenth", 20: "twentieth",
-    21: "twenty-first", 22: "twenty-second", 23: "twenty-third", 24: "twenty-fourth",
-    25: "twenty-fifth", 26: "twenty-sixth", 27: "twenty-seventh", 28: "twenty-eighth",
-    29: "twenty-ninth", 30: "thirtieth", 31: "thirty-first",
-  };
-  const day = ordinals[d.getDate()] ?? ord(d.getDate());
-  return `the ${day} of ${months[d.getMonth()]}, ${d.getFullYear()}`;
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }

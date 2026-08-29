@@ -20,13 +20,13 @@ const CODE_RE = /^\d{6}$/;
 
 function validate(mode: Mode, f: Record<FieldKey, string>): Partial<Record<FieldKey, string>> {
   const errors: Partial<Record<FieldKey, string>> = {};
-  if (!f.phone.trim()) errors.phone = "Please enter your phone number";
+  if (!f.phone.trim()) errors.phone = "请填手机号";
   if (f.password.length < 8 || f.password.length > 128)
-    errors.password = "Password needs 8–128 characters";
+    errors.password = "密码需要 8–128 位";
   if (mode === "register") {
     const username = f.username.trim();
     if (username.length < 1 || username.length > 64)
-      errors.username = "Pick a name between 1–64 characters";
+      errors.username = "名字要在 1–64 个字之间";
     if (!CODE_RE.test(f.code.trim())) errors.code = "The code is 6 digits";
   }
   return errors;
@@ -110,7 +110,7 @@ export default function Auth({
   /* 注册第一步:发验证码;demo 环境后端直接返回码,预填并展示 */
   const sendCode = async () => {
     if (!fields.phone.trim()) {
-      setErrors((prev) => ({ ...prev, phone: "Enter your phone number first" }));
+      setErrors((prev) => ({ ...prev, phone: "先填手机号再发验证码" }));
       return;
     }
     setSendingCode(true);
@@ -120,7 +120,7 @@ export default function Auth({
       if (result.verification_code) {
         setFields((prev) => ({ ...prev, code: result.verification_code! }));
         setErrors((prev) => ({ ...prev, code: undefined }));
-        setCodeHint(`demo code ${result.verification_code} — prefilled for you`);
+        setCodeHint(`demo 验证码 ${result.verification_code},已帮你填好`);
       } else {
         setCodeHint(`code sent · expires in ${Math.round(result.expires_in_seconds / 60)} min`);
       }
@@ -185,14 +185,14 @@ export default function Auth({
       {/* 表单 */}
       <div style={{ marginTop: 34, flexShrink: 0 }}>
         <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>
-          {mode === "login" ? "Welcome back" : "Make your room"}
+          {mode === "login" ? "欢迎回来" : "布置你的房间"}
         </div>
         <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
-          {mode === "login" ? "sign in to keep your stories close" : "a phone number is all it takes"}
+          {mode === "login" ? "登录,把故事放在身边" : "一个手机号就够了"}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
-          <Field label="phone number" error={errors.phone}>
+          <Field label="手机号" error={errors.phone}>
             <input
               value={fields.phone}
               onChange={set("phone")}
@@ -206,7 +206,7 @@ export default function Auth({
 
           {mode === "register" && (
             <>
-              <Field label="6-digit code" error={errors.code}>
+              <Field label="6 位验证码" error={errors.code}>
                 <input
                   value={fields.code}
                   onChange={set("code")}
@@ -230,7 +230,7 @@ export default function Auth({
                     marginBottom: 2,
                   }}
                 >
-                  {sendingCode ? "sending…" : fields.code ? "resend" : "send code"}
+                  {sendingCode ? "发送中…" : fields.code ? "重发" : "发验证码"}
                 </button>
               </Field>
               {codeHint && (
@@ -238,11 +238,11 @@ export default function Auth({
                   {codeHint}
                 </div>
               )}
-              <Field label="what should we call you?" error={errors.username}>
+              <Field label="怎么称呼你?" error={errors.username}>
                 <input
                   value={fields.username}
                   onChange={set("username")}
-                  placeholder="your name"
+                  placeholder="你的名字"
                   maxLength={64}
                   autoComplete="nickname"
                   aria-label="Username"
@@ -252,7 +252,7 @@ export default function Auth({
             </>
           )}
 
-          <Field label="password · 8–128 characters" error={errors.password}>
+          <Field label="密码 · 8–128 位" error={errors.password}>
             <input
               value={fields.password}
               onChange={set("password")}
@@ -284,7 +284,7 @@ export default function Auth({
         style={{ width: "100%", flexShrink: 0 }}
       >
         <span style={{ fontSize: 19, fontWeight: 700 }}>
-          {busy ? "one moment…" : mode === "login" ? "Enter my room" : "Create my room"}
+          {busy ? "稍等一下…" : mode === "login" ? "回到我的房间" : "布置我的房间"}
         </span>
       </button>
 
@@ -304,7 +304,7 @@ export default function Auth({
             paddingBottom: 2,
           }}
         >
-          {mode === "login" ? "New here? Create an account" : "Already have a room? Sign in"}
+          {mode === "login" ? "第一次来?注册一个" : "已有房间?直接登录"}
         </button>
       </div>
 
@@ -315,7 +315,7 @@ export default function Auth({
             onClick={onSkipDemo}
             style={{ fontSize: 12, fontStyle: "italic", color: "var(--placeholder)" }}
           >
-            skip for now · demo only
+            先逛逛 · 仅演示
           </button>
         </div>
       )}

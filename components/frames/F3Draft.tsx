@@ -6,7 +6,7 @@ import { longDate } from "@/lib/mock/titles";
 import { MountedPrint } from "../ui";
 
 /**
- * F3 — Keep this story（沙盘对话结束之后）
+ * F3 — 存下这个故事（沙盘对话结束之后）
  * 确认标题/封面（系统生成，标题可改）+ 选择可见性：Private / Friends / Community。
  * 零必填，只有确认。无 companion 在场 —— 整理是用户自己的时刻（理理理.md §5）。
  */
@@ -14,9 +14,9 @@ import { MountedPrint } from "../ui";
 const COVERS = ["sage", "blush", "lavender"];
 
 const VISIBILITY_OPTIONS = [
-  { id: "private" as const, label: "Private", hint: "only you can see it" },
-  { id: "friends" as const, label: "Friends", hint: "people you let in" },
-  { id: "community" as const, label: "Community", hint: "open for anyone" },
+  { id: "private" as const, label: "仅自己", hint: "只有你能看见" },
+  { id: "friends" as const, label: "朋友", hint: "你允许的人" },
+  { id: "community" as const, label: "公开", hint: "所有人都能进来" },
 ];
 
 export default function F3Draft({
@@ -67,15 +67,15 @@ export default function F3Draft({
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="nav-title">A new story</span>
-        <span style={{ minWidth: 44, textAlign: "right", fontSize: 14, fontStyle: "italic", color: "var(--placeholder)" }}>Draft</span>
+        <span className="nav-title">新故事</span>
+        <span style={{ minWidth: 44, textAlign: "right", fontSize: 14, fontStyle: "italic", color: "var(--placeholder)" }}>草稿</span>
       </div>
 
       {/* 封面：Review 裱卡，居中 */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 26, flexShrink: 0 }}>
         <MountedPrint variant="review" cover={cover} />
         <span className="meta-italic" style={{ marginTop: 12 }}>
-          Made from what you said
+          由你说的话生成
         </span>
       </div>
 
@@ -88,7 +88,7 @@ export default function F3Draft({
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Give it a title"
+              placeholder="起个名字"
               maxLength={60}
               aria-label="Story title"
               style={{
@@ -115,7 +115,7 @@ export default function F3Draft({
 
       {/* 可见性：想怎么 keep 这个故事 */}
       <div style={{ marginTop: 22, flexShrink: 0 }}>
-        <span className="meta-italic">Who can walk through this room?</span>
+        <span className="meta-italic">谁能走进这个房间?</span>
         <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
           {VISIBILITY_OPTIONS.map((opt) => {
             const selected = visibility === opt.id;
@@ -146,7 +146,7 @@ export default function F3Draft({
         </div>
       </div>
 
-      {/* In your words：转写回顾 */}
+      {/* 你的原话：转写回顾 */}
       <div
         style={{
           flex: 1,
@@ -158,7 +158,7 @@ export default function F3Draft({
           overflowY: "auto",
         }}
       >
-        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--faint)" }}>In your words</span>
+        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--faint)" }}>你的原话</span>
         <p style={{ margin: "9px 0 0", fontSize: 15.5, fontWeight: 300, lineHeight: 1.65, color: "var(--ink-2)" }}>
           {transcript}
         </p>
@@ -168,7 +168,7 @@ export default function F3Draft({
       <button
         onClick={() =>
           onKeep({
-            title: title.trim() || "An Untitled Day",
+            title: title.trim() || "无题的一天",
             cover,
             reflection: "",
             transcript,
@@ -179,7 +179,7 @@ export default function F3Draft({
         className="btn"
         style={{ width: "100%", marginTop: 22, flexShrink: 0 }}
       >
-        <span>Keep this story</span>
+        <span>存下这个故事</span>
       </button>
     </div>
   );

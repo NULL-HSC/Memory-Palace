@@ -27,6 +27,9 @@ export default function PickRole({
   const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null); // 提取失败:不塞 mock,给重试 + 真实原因
   const inflightRef = useRef<string | null>(null); // dev StrictMode 双挂会双发同一请求,按 transcript 去重
+  /** 数据在进场前就备好(等候室已完成解构):角色直接出现,不走加载动画;
+   *  loading/shimmer 只留给真的要等网络的时候(?frame=pick 捷径或弱网) */
+  const readyAtEntry = prepared?.personas != null;
 
   const load = () => {
     if (inflightRef.current === transcript) return;
@@ -65,7 +68,7 @@ export default function PickRole({
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="nav-title">The sandplay</span>
+        <span className="nav-title">沙盘</span>
         <span className="nav-side" />
       </div>
 
@@ -74,13 +77,13 @@ export default function PickRole({
         {/* 文案按实际提取到的角色数走,不写死(用户说得少时可能只有一两个) */}
         <span className="meta-italic">
           {personas === null
-            ? "Listening for the voices in this story"
+            ? "正在倾听这个故事里的声音"
             : personas.length === 1
-              ? "One voice was in this story"
-              : `${["", "One", "Two", "Three"][personas.length] ?? personas.length} voices were in this story`}
+              ? "这个故事里有一个声音"
+              : `这个故事里有${["", "一", "两", "三"][personas.length] ?? personas.length}个声音`}
         </span>
         <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.3, marginTop: 8 }}>
-          Who do you want to step in as?
+          你想成为故事里的谁?
         </div>
       </div>
 
@@ -89,7 +92,7 @@ export default function PickRole({
         {error !== null ? (
           <div style={{ textAlign: "center", padding: "26px 0" }}>
             <div className="meta-italic" style={{ fontSize: 13.5 }}>
-              Couldn&rsquo;t read the story just now.
+              刚才没能读懂这个故事。
             </div>
             {/* 演示期调试:把真实失败原因露出来,方便区分 503 未配置 / 502 解析失败 / 网络 */}
             <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
@@ -108,7 +111,7 @@ export default function PickRole({
                 color: "var(--ink)",
               }}
             >
-              Try again
+              再试一次
             </button>
           </div>
         ) : personas === null ? (
@@ -138,22 +141,22 @@ export default function PickRole({
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "left",
-                  animation: `bubbleIn 400ms var(--ease-soft) ${i * 90}ms both`,
+                  animation: readyAtEntry ? undefined : `bubbleIn 400ms var(--ease-soft) ${i * 90}ms both`,
                 }}
               >
+                {/* 角色贴纸:整只立绘,不裁圆 */}
                 <span
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    background: "var(--mist)",
-                    overflow: "hidden",
+                    width: 56,
+                    height: 60,
                     flexShrink: 0,
-                    display: "block",
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.avatar} alt={p.name} style={{ width: 48, height: 48, objectFit: "cover", objectPosition: "50% 12%" }} />
+                  <img src={p.avatar} alt={p.name} style={{ maxWidth: 56, maxHeight: 60, objectFit: "contain", display: "block" }} />
                 </span>
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 16.5, fontWeight: 500, color: selected ? "var(--ink-blue)" : "var(--ink)" }}>
@@ -177,7 +180,7 @@ export default function PickRole({
         disabled={!chosen}
         style={{ width: "100%", marginTop: 22, flexShrink: 0 }}
       >
-        <span>{chosen ? `Step in as ${chosen.name}` : "Pick a voice to step in"}</span>
+        <span>{chosen ? `以「${chosen.name}」进入` : "选一个声音进入"}</span>
       </button>
     </div>
   );

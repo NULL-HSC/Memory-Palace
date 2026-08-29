@@ -44,7 +44,7 @@ export default function F4Sandplay({
   cast?: Persona[]; // 故事 Top 3；老故事没有时回退到 mock 阵容(仅元数据,发言仍是真 LLM)
   onBack: () => void;
   onKeep?: () => void; // 草稿故事:结束弹窗/End 按钮/返回确认里给 Keep 入口
-  onDiscard?: () => void; // 草稿故事:返回确认弹窗里"Let it go"丢弃草稿
+  onDiscard?: () => void; // 草稿故事:返回确认弹窗里"不要了"丢弃草稿
 }) {
   const castList = useMemo(() => (cast && cast.length > 0 ? cast : MOCK_PERSONAS), [cast]);
   /** AI 发言者 = Top 3 中除用户带入者之外的人设(各自独立 LLM session) */
@@ -205,140 +205,251 @@ export default function F4Sandplay({
   };
 
   const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
+  const [micNote, setMicNote] = useState(false);
 
   return (
-    <div className="frame frame-enter" style={{ padding: 0 }}>
-      {/* ══ 全幅竖屏舞台(AIGC video 槽位,未就绪时"演绎中"加载态) ══ */}
-      <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
+    <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      {/* ══ 顶部:雾蓝波浪布条(短版,同 Home 的手法) ══ */}
+      <svg aria-hidden viewBox="0 0 390 76" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 76, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}>
+        <defs>
+          <linearGradient id="roomBandG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#EAF6FB" />
+            <stop offset="72%" stopColor="var(--mist)" />
+            <stop offset="100%" stopColor="var(--sky)" />
+          </linearGradient>
+        </defs>
+        <path d="M0 0 H390 V40 Q370 62 348 46 Q326 32 306 44 Q286 56 262 42 Q238 28 216 42 Q194 54 168 40 Q142 26 118 42 Q94 54 70 42 Q46 30 22 44 Q10 52 0 40 Z" fill="url(#roomBandG)" />
+        <path d="M390 34 Q370 56 348 40 Q326 26 306 38 Q286 50 262 36 Q238 22 216 36 Q194 48 168 34 Q142 20 118 36 Q94 48 70 36 Q46 24 22 38 Q10 46 0 34" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+      </svg>
 
-      {/* ══ 顶部 nav:浮在画面上,带柔光衬底保证可读 ══ */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          padding: "var(--screen-top) var(--screen-x) 26px",
-          background: "linear-gradient(180deg, rgba(255,249,238,0.85) 0%, rgba(255,249,238,0) 100%)",
-          zIndex: 10,
-        }}
-      >
-        <div className="nav-bar">
-          {/* 草稿流程(onKeep 存在):返回先弹二次确认;老故事直接回主页 */}
-          <button className="nav-side back-chevron" onClick={() => (onKeep ? setShowLeave(true) : onBack())} aria-label="Back">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {/* ══ 内容层 ══ */}
+      <div style={{ position: "relative", zIndex: 103, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+        {/* nav:ribbon 返回(故事房间)+ 右侧 End(草稿才有) */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px var(--screen-x) 0", flexShrink: 0 }}>
+          <button
+            className="ribbon"
+            onClick={() => (onKeep ? setShowLeave(true) : onBack())}
+            aria-label="返回"
+            style={{ border: "none", cursor: "pointer", gap: 7 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--cream)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M15 5l-7 7 7 7" />
             </svg>
+            故事房间
           </button>
-          <span className="nav-title">The sandplay</span>
-          {onKeep ? (
-            <button
-              className="nav-side"
-              onClick={onKeep}
-              style={{ justifyContent: "flex-end", marginRight: -12, minHeight: 44, fontSize: 14, fontStyle: "italic", color: "var(--readable)" }}
-            >
-              End
+          {onKeep && (
+            <button onClick={onKeep} style={{ minHeight: 44, fontSize: 14, fontStyle: "italic", color: "var(--ink-blue)" }}>
+              结束
             </button>
-          ) : (
-            <span className="nav-side" style={{ justifyContent: "flex-end", marginRight: -12 }} aria-hidden>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-                <circle cx="12" cy="5" r="1.4" />
-                <circle cx="12" cy="12" r="1.4" />
-                <circle cx="12" cy="19" r="1.4" />
-              </svg>
-            </span>
           )}
         </div>
-      </div>
 
-      {/* ══ 弹幕式对话浮层:底部流入,向上渐隐进场景 ══ */}
-      <div
-        ref={scrollRef}
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 84,
-          maxHeight: "36%",
-          overflowY: "auto",
-          padding: "56px 16px 0",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          zIndex: 10,
-          WebkitMaskImage: "linear-gradient(180deg, transparent 0, black 72px)",
-          maskImage: "linear-gradient(180deg, transparent 0, black 72px)",
-        }}
-      >
-        {messages.map((m) =>
-          m.speakerId === "user" ? (
-            <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 8, animation: "bubbleIn 300ms var(--ease-soft) both" }}>
-              <div
-                style={{
-                  maxWidth: "76%",
-                  padding: "9px 14px",
-                  borderRadius: "20px 20px 6px 20px",
-                  background: "var(--sky)",
-                }}
-              >
-                {persona && (
-                  <span style={{ fontSize: 11.5, fontStyle: "italic", color: "rgba(18,85,113,0.65)", marginRight: 6 }}>{persona.name}</span>
-                )}
-                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--ink)" }}>{m.text}</span>
-              </div>
-              {persona && (
-                <span
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: "50%",
-                    background: "var(--mist)",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    display: "block",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={persona.avatar} alt={persona.name} style={{ width: 30, height: 30, objectFit: "cover", objectPosition: "50% 12%" }} />
-                </span>
-              )}
-            </div>
-          ) : (
-            <DanmakuBubble key={m.ts + m.text} speaker={personaById(m.speakerId)} text={m.text} />
-          )
-        )}
-        {streaming && (
-          <DanmakuBubble
-            speaker={personaById(streaming.speakerId)}
-            streamingText={streaming.text}
-            onStreamDone={() => {
-              const done = streaming;
-              setMessages((m) => [...m, toTurn(story.id, done)]);
-              resolverRef.current?.();
-            }}
-          />
-        )}
-        {typingId && <PersonaTyping speaker={personaById(typingId)} />}
-        {/* LLM 轮失败:不再是"死一样的安静",给一条可点重试的轻提示 */}
-        {llmError && (
-          <button
-            onClick={retryRound}
+        {/* ══ 放映框:sky 立体外框(硬底边)+ 内嵌舞台 + 进度条 ══ */}
+        <div
+          style={{
+            margin: "14px var(--screen-x) 0",
+            background: "var(--sky)",
+            borderRadius: "var(--r-panel)",
+            padding: 10,
+            boxShadow: "0 5px 0 var(--sky-under), var(--lift-2)",
+            flexShrink: 0,
+          }}
+        >
+          <div
             style={{
-              alignSelf: "center",
-              padding: "8px 16px",
-              borderRadius: 999,
-              background: "var(--raised)",
-              border: "none",
-              boxShadow: "var(--lift-1)",
-              fontSize: 12.5,
-              fontStyle: "italic",
-              color: "var(--readable)",
-              animation: "bubbleIn 300ms var(--ease-soft) both",
+              position: "relative",
+              width: "100%",
+              aspectRatio: "16 / 9",
+              borderRadius: "var(--r-chip)",
+              overflow: "hidden",
+              background: "var(--mist)",
             }}
           >
-            the room lost its voice · tap to retry
-          </button>
-        )}
+            <div style={{ position: "absolute", inset: 0 }}>
+              <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
+            </div>
+          </div>
+          {/* 进度条(装饰,真视频接入后联动) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, padding: "0 2px" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-blue)", flexShrink: 0 }} />
+            <span style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(18,85,113,0.25)" }} />
+            <span style={{ fontSize: 11, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </div>
+        </div>
+
+        {/* ══ 群聊列表 ══ */}
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: "14px var(--screen-x) 10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          {messages.map((m) =>
+            m.speakerId === "user" ? (
+              <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 8, animation: "bubbleIn 300ms var(--ease-soft) both" }}>
+                <div
+                  style={{
+                    maxWidth: "76%",
+                    padding: "9px 14px",
+                    borderRadius: "16px 4px 16px 16px",
+                    background: "var(--butter)",
+                    boxShadow: "var(--lift-1)",
+                  }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--ink)" }}>{m.text}</span>
+                </div>
+                {persona && <ChatAvatar speaker={persona} />}
+              </div>
+            ) : (
+              <ChatMessage key={m.ts + m.text} speaker={personaById(m.speakerId)} text={m.text} />
+            )
+          )}
+          {streaming && (
+            <ChatMessage
+              speaker={personaById(streaming.speakerId)}
+              streamingText={streaming.text}
+              onStreamDone={() => {
+                const done = streaming;
+                setMessages((m) => [...m, toTurn(story.id, done)]);
+                resolverRef.current?.();
+              }}
+            />
+          )}
+          {typingId && <ChatTyping speaker={personaById(typingId)} />}
+          {llmError && (
+            <button
+              onClick={retryRound}
+              style={{
+                alignSelf: "center",
+                padding: "8px 16px",
+                borderRadius: 999,
+                background: "var(--raised)",
+                border: "none",
+                boxShadow: "var(--lift-1)",
+                fontSize: 12.5,
+                fontStyle: "italic",
+                color: "var(--readable)",
+                animation: "bubbleIn 300ms var(--ease-soft) both",
+              }}
+            >
+              房间突然安静了 · 点我重试
+            </button>
+          )}
+        </div>
+
+        {/* ══ 底部输入带:sky 带 + 车缝;左 mic / 中输入 / 右发送 ══ */}
+        <div
+          style={{
+            position: "relative",
+            flexShrink: 0,
+            background: "var(--sky)",
+            borderRadius: "22px 22px 0 0",
+            padding: "14px var(--screen-x) max(14px, env(safe-area-inset-bottom))",
+          }}
+        >
+          <svg aria-hidden viewBox="0 0 390 10" preserveAspectRatio="none" style={{ position: "absolute", top: -1, left: 0, width: "100%", height: 10 }}>
+            <path d="M0 5 Q24 0 48 5 T97 5 T146 5 T195 5 T244 5 T293 5 T342 5 T390 5" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+          </svg>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={() => {
+                setMicNote(true);
+                setTimeout(() => setMicNote(false), 1800);
+              }}
+              aria-label="语音发言"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                background: "var(--cream)",
+                boxShadow: "var(--lift-1)",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
+                <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
+              </svg>
+            </button>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
+              aria-label="输入消息"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 46,
+                border: "none",
+                borderRadius: 23,
+                background: "var(--cream)",
+                boxShadow: "var(--lift-1)",
+                padding: "0 18px",
+                fontSize: 15,
+                fontWeight: 500,
+                color: "var(--ink)",
+              }}
+            />
+            <button
+              onClick={send}
+              aria-label="发送"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                background: "var(--butter)",
+                boxShadow: "0 3px 0 var(--butter-under)",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M22 2L11 13" />
+                <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </div>
+          {/* mic 占位提示 */}
+          {micNote && (
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: -34,
+                transform: "translateX(-50%)",
+                padding: "6px 14px",
+                borderRadius: 999,
+                background: "var(--ink)",
+                color: "var(--cream)",
+                fontSize: 12,
+                boxShadow: "var(--lift-2)",
+                animation: "bubbleIn 300ms var(--ease-soft) both",
+                whiteSpace: "nowrap",
+              }}
+            >
+              语音发言稍后开放
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ══ 三轮无互动 → 结束弹窗 ══ */}
@@ -351,7 +462,7 @@ export default function F4Sandplay({
             alignItems: "center",
             justifyContent: "center",
             background: "rgba(255,249,238,0.88)",
-            zIndex: 20,
+            zIndex: 120,
           }}
         >
           <div
@@ -365,18 +476,16 @@ export default function F4Sandplay({
               animation: "bubbleIn 400ms var(--ease-soft) both",
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>The room has gone quiet</div>
+            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>房间安静下来了</div>
             <div className="meta-italic" style={{ marginTop: 8, fontSize: 13 }}>
-              Want to wrap up this story?
+              要把这个故事收起来吗?
             </div>
             <button
               onClick={() => (onKeep ? onKeep() : onBack())}
               className="btn"
               style={{ width: "100%", marginTop: 18 }}
             >
-              <span>
-                {onKeep ? "Keep this story" : "Leave the room"}
-              </span>
+              <span>{onKeep ? "存下这个故事" : "离开房间"}</span>
             </button>
             <button
               onClick={() => {
@@ -385,7 +494,7 @@ export default function F4Sandplay({
               }}
               style={{ width: "100%", minHeight: 44, marginTop: 6, fontSize: 14, fontStyle: "italic", color: "var(--muted)" }}
             >
-              Stay a little longer
+              再待一会儿
             </button>
           </div>
         </div>
@@ -401,7 +510,7 @@ export default function F4Sandplay({
             alignItems: "center",
             justifyContent: "center",
             background: "rgba(255,249,238,0.88)",
-            zIndex: 30,
+            zIndex: 120,
           }}
         >
           <div
@@ -415,9 +524,9 @@ export default function F4Sandplay({
               animation: "bubbleIn 400ms var(--ease-soft) both",
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>Keep this story before you go?</div>
+            <div style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)" }}>走之前,要存下这个故事吗?</div>
             <div className="meta-italic" style={{ marginTop: 8, fontSize: 13 }}>
-              It can stay with you — or drift away, unkept.
+              它可以留下来陪你,也可以就这么散去。
             </div>
             <button
               onClick={() => {
@@ -427,7 +536,7 @@ export default function F4Sandplay({
               className="btn"
               style={{ width: "100%", marginTop: 18 }}
             >
-              <span>Keep it</span>
+              <span>存下</span>
             </button>
             <button
               onClick={() => {
@@ -436,68 +545,17 @@ export default function F4Sandplay({
               }}
               style={{ width: "100%", minHeight: 44, marginTop: 6, fontSize: 14, fontStyle: "italic", color: "var(--muted)" }}
             >
-              Let it go
+              不要了
             </button>
           </div>
         </div>
       )}
-
-      {/* ══ 悬浮输入栏:以带入角色的视角发言 ══ */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: "26px 16px max(26px, env(safe-area-inset-bottom))",
-          background: "linear-gradient(0deg, rgba(255,249,238,0.9) 30%, rgba(255,249,238,0) 100%)",
-          zIndex: 11,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            height: 52,
-            padding: "0 8px 0 20px",
-            borderRadius: 26,
-            background: "var(--raised)",
-            border: "1px solid var(--line)",
-            boxShadow: "var(--shadow-input)",
-          }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder={persona ? `Speak as ${persona.name}…` : "Say something back…"}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: "none",
-              background: "transparent",
-              fontSize: 15,
-              fontWeight: 300,
-              color: "var(--ink)",
-              padding: 0,
-            }}
-          />
-          <button onClick={send} aria-label="Send" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, flexShrink: 0 }}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "var(--butter)", boxShadow: "0 3px 0 var(--butter-under)" }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" />
-              </svg>
-            </span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
 
-/* 弹幕气泡:半透明磨砂 chip,盖在画面上;发言人 = 故事人设 */
-function DanmakuBubble({
+/* 他人的一条消息:头像 + 名字(在气泡上方)+ 白底气泡带阴影 */
+function ChatMessage({
   speaker,
   text,
   streamingText,
@@ -510,39 +568,41 @@ function DanmakuBubble({
 }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
-      <PersonaAvatar speaker={speaker} size={34} />
-      <div
-        style={{
-          maxWidth: "80%",
-          padding: "8px 13px",
-          borderRadius: "20px 20px 20px 6px",
-          background: "var(--raised)",
-          boxShadow: "var(--lift-1)",
-        }}
-      >
-        <span style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--readable)", marginRight: 6 }}>
+      <ChatAvatar speaker={speaker} />
+      <div style={{ minWidth: 0, maxWidth: "76%" }}>
+        <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-blue)", margin: "0 0 3px 4px" }}>
           {speaker?.name ?? "…"}
         </span>
-        <span aria-live="polite" style={{ fontSize: 14.5, fontWeight: 300, lineHeight: 1.5 }}>
-          {streamingText != null ? <TypeText text={streamingText} speed={26} onDone={onStreamDone} /> : text}
-        </span>
+        <div
+          style={{
+            padding: "9px 14px",
+            borderRadius: "4px 16px 16px 16px",
+            background: "var(--raised)",
+            boxShadow: "var(--lift-1)",
+          }}
+        >
+          <span aria-live={streamingText != null ? "polite" : undefined} style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--ink)" }}>
+            {streamingText != null ? <TypeText text={streamingText} speed={26} onDone={onStreamDone} /> : text}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
-/* typing 预告:头像 + 三点律动 */
-function PersonaTyping({ speaker }: { speaker?: Persona }) {
+/* typing 预告:头像 + 白底气泡三点 */
+function ChatTyping({ speaker }: { speaker?: Persona }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
-      <PersonaAvatar speaker={speaker} size={34} />
+      <ChatAvatar speaker={speaker} />
       <div
         style={{
           display: "inline-flex",
           alignItems: "center",
           gap: 5,
-          padding: "13px 15px",
-          borderRadius: "20px 20px 20px 6px",
+          marginTop: 18,
+          padding: "12px 15px",
+          borderRadius: "4px 16px 16px 16px",
           background: "var(--raised)",
           boxShadow: "var(--lift-1)",
         }}
@@ -555,7 +615,7 @@ function PersonaTyping({ speaker }: { speaker?: Persona }) {
               width: 5,
               height: 5,
               borderRadius: "50%",
-              background: "rgba(47,159,200,0.5)",
+              background: "var(--story)",
               animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
             }}
           />
@@ -565,13 +625,13 @@ function PersonaTyping({ speaker }: { speaker?: Persona }) {
   );
 }
 
-/* 人设圆形头像(裁脸) */
-function PersonaAvatar({ speaker, size }: { speaker?: Persona; size: number }) {
+/* 群聊头像:40px 圆,裁脸 */
+function ChatAvatar({ speaker }: { speaker?: Persona }) {
   return (
     <span
       style={{
-        width: size,
-        height: size,
+        width: 40,
+        height: 40,
         borderRadius: "50%",
         background: "var(--mist)",
         flexShrink: 0,
@@ -581,7 +641,7 @@ function PersonaAvatar({ speaker, size }: { speaker?: Persona; size: number }) {
     >
       {speaker && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={speaker.avatar} alt={speaker.name} style={{ width: size, height: size, objectFit: "cover", objectPosition: "50% 12%" }} />
+        <img src={speaker.avatar} alt={speaker.name} style={{ width: 40, height: 40, objectFit: "cover", objectPosition: "50% 12%" }} />
       )}
     </span>
   );

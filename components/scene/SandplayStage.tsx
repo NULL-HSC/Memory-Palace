@@ -210,21 +210,8 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
             zIndex: 2,
           }}
         >
-          {/* 呼吸光晕 + 三点律动,友好等待感 */}
-          <div
-            aria-hidden
-            style={{
-              width: 92,
-              height: 92,
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(255,216,106,0.85) 0%, rgba(255,216,106,0) 70%)",
-              animation: "think 2.6s ease-in-out infinite",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
+          {/* 三点律动 + 一句提示:安静的等候态,不用大色块 */}
+          <div aria-hidden style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
@@ -234,7 +221,7 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
                   height: 6,
                   borderRadius: "50%",
                   background: "var(--story)",
-                  animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
+                  animation: `think 1.6s ease-in-out ${i * 0.22}s infinite`,
                 }}
               />
             ))}
