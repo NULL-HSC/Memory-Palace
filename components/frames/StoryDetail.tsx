@@ -136,9 +136,19 @@ export default function StoryDetail({
           )}
         </div>
 
-        {/* 留言区 */}
-        <div style={{ marginTop: 22 }}>
-          <span className="meta-italic" style={{ fontSize: 13 }}>留言 · {comments.length}</span>
+        {/* 留言区:与上半区用一条虚线车缝浅浅分开(不上颜色,同首页布带的车缝语言) */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg aria-hidden viewBox="0 0 340 8" preserveAspectRatio="none" style={{ position: "absolute", left: 0, width: "100%", height: 8 }}>
+              <path d="M0 4 H340" stroke="var(--ink-blue)" strokeOpacity="0.35" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" fill="none" />
+            </svg>
+            <span
+              className="meta-italic"
+              style={{ position: "relative", fontSize: 13, background: "var(--ground)", padding: "0 10px" }}
+            >
+              留言 · {comments.length}
+            </span>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
             {comments.length === 0 && (
               <span className="meta-italic" style={{ fontSize: 12.5, color: "var(--placeholder)" }}>
