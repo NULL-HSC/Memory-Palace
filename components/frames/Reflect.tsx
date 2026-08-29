@@ -1,20 +1,25 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getPlaybackUrl, getSessionStatus, prepareSandplay, type PreparedSandplay } from "@/lib/api";
 import { Companion } from "../characters";
 import { ClosedCurtainBackdrop } from "../scene/Curtain";
+import HeadMatch, { type ClearInfo } from "../game/HeadMatch";
+import { createQuoteDeck, type MindfulQuote } from "@/lib/mindful-quotes";
 
 /**
- * 等候室(2026-08-29 产品确认改版)
+ * 等候室(2026-08-29 产品确认改版 → 2026-08-29 二改:占位符换成小游戏)
  *
  * 寄出故事之后、场景还在准备的等待环节:
- * - 中部是**占位符区**:等待时的冥想/小游戏尚未定方向,先留空(gingham 虚线槽位)
- * - 不再有旁观者陪聊 LLM;只安静等待「VLM 视频返回」这个外部事件
+ * - 中部是**头像消消乐**(HeadMatch):用六位角色的头做棋子,没有倒计时/失败态,
+ *   死局自动洗牌 —— 目的是把人留在这一步、别觉得干等,不是让人玩到上头
+ * - 顶上是**一句话**:每消掉一组,从预置的正念短句 / 名人名言里随机换一句
+ *   (lib/mindful-quotes.ts),用来卸掉一点内耗;不陪聊、不调 LLM
  * - 视频就绪 → 幕前出现一封**回信**;用户拆开 → 幕布拉开(CurtainVeil)→ 首映页
  *
  * 这一帧同时承担真正的等待:挂载即并行 prepareSandplay(建 session → 触发视频任务
  * → 提取人设),随后等视频生成完成。结果经 onReady 向上传,避免后续帧重复请求。
+ * 游戏只是等待期的陪伴,**不影响也不阻塞**这条链路:回信一到就 paused,幕布照拉。
  */
 
 const MOCK_VIDEO_MS = 4200; // 本地演示:模拟 VLM 生成耗时
@@ -54,6 +59,20 @@ export default function Reflect({
   const playbackRef = useRef<string | null>(null);
   const aliveRef = useRef(true);
   const inflightRef = useRef<string | null>(null); // StrictMode 双挂去重
+
+  /* ---- 顶上的一句话:预置文案,每消一组随机抽一张,一轮之内不重复 ---- */
+  const drawQuote = useMemo(() => createQuoteDeck(), []);
+  const [quote, setQuote] = useState<MindfulQuote>(() => drawQuote());
+  const [quoteSeq, setQuoteSeq] = useState(0); // 换句时重放入场动画
+  const [cleared, setCleared] = useState(0);
+
+  /** 玩家这一步消掉了(连锁续消不抢词,只累加计数,免得一句话没看清就被换掉) */
+  const handleClear = (info: ClearInfo) => {
+    setCleared(info.total);
+    if (info.combo > 1) return;
+    setQuote(drawQuote());
+    setQuoteSeq((n) => n + 1);
+  };
 
   /** 完整的「等回信」流程:解构 → 等视频 → 回信抵达 */
   const waitForLetter = () => {
@@ -102,6 +121,8 @@ export default function Reflect({
 
   return (
     <div className="frame frame-enter">
+      <style>{REFLECT_CSS}</style>
+
       {/* nav */}
       <div className="nav-bar">
         <button className="nav-side back-chevron" onClick={onBack} aria-label="返回">
@@ -113,42 +134,100 @@ export default function Reflect({
         <span className="nav-side" />
       </div>
 
-      {/* 舞台口:背后是一直闭着的幕布 + 台前光,companion 站在幕前陪你等 */}
-      <div style={{ position: "relative", marginTop: 18, flexShrink: 0, height: 170 }}>
-        <ClosedCurtainBackdrop height={132} />
-        <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
-          <Companion size={92} className="anim-bob" />
+      {/* 顶部:闭合的舞台口 + 挂在幕前的「一句话」牌子(companion 念给你听) */}
+      <div style={{ position: "relative", marginTop: 14, flexShrink: 0, height: 138 }}>
+        <ClosedCurtainBackdrop height={98} />
+        <div
+          className="card-frame"
+          style={{
+            position: "absolute",
+            left: 6,
+            right: 6,
+            bottom: 0,
+            minHeight: 82,
+            borderRadius: "var(--r-panel)",
+            boxShadow: "var(--lift-2)",
+            padding: "12px 14px 10px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Companion size={44} className="anim-bob" style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }} aria-live="polite">
+            <div
+              key={quoteSeq}
+              className="rf-quote"
+              style={{
+                fontFamily: "var(--font-hand)",
+                fontSize: quote.text.length > 14 ? 16 : 17.5,
+                lineHeight: 1.55,
+                color: "var(--ink-blue)",
+              }}
+            >
+              {quote.text}
+            </div>
+            {quote.from && (
+              <div key={`from-${quoteSeq}`} className="rf-quote meta-italic" style={{ fontSize: 11.5, marginTop: 3, textAlign: "right" }}>
+                —— {quote.from}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 中部:等待占位符区 / 回信抵达 */}
-      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: 18 }}>
-        {prepError ? (
-          /* 准备失败:这条路走不下去,给真实原因 + 重试 */
-          <div style={{ textAlign: "center", margin: "auto 0" }}>
-            <div className="meta-italic" style={{ fontSize: 13.5 }}>这会儿没能把景搭起来。</div>
-            <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
-              {prepError}
-            </div>
-            <button
-              onClick={waitForLetter}
-              style={{
-                marginTop: 14,
-                minHeight: 44,
-                padding: "0 22px",
-                borderRadius: 22,
-                border: "1px solid var(--line)",
-                background: "var(--raised)",
-                fontSize: 14.5,
-                color: "var(--ink)",
-              }}
-            >
-              再试一次
-            </button>
+      {/* 中部:等待期的小游戏 / 准备失败时的重试 */}
+      {prepError ? (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: "center" }}>
+          <div className="meta-italic" style={{ fontSize: 13.5 }}>这会儿没能把景搭起来。</div>
+          <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
+            {prepError}
           </div>
-        ) : letterReady ? (
-          /* 回信抵达:整页压暗,一封信弹在遮罩之上,等用户拆开 */
-          <div style={{ position: "absolute", inset: 0, zIndex: 20, background: "var(--scrim)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button
+            onClick={waitForLetter}
+            style={{
+              margin: "14px auto 0",
+              minHeight: 44,
+              padding: "0 22px",
+              borderRadius: 22,
+              border: "1px solid var(--line)",
+              background: "var(--raised)",
+              fontSize: 14.5,
+              color: "var(--ink)",
+            }}
+          >
+            再试一次
+          </button>
+        </div>
+      ) : (
+        <HeadMatch onClear={handleClear} paused={letterReady} />
+      )}
+
+      {/* 底部状态:左边是等待进度,右边是这局战绩 */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          marginTop: 10,
+          flexShrink: 0,
+        }}
+      >
+        <span className="meta-italic" style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
+          {!prepError && !letterReady && <span className="rf-dot" aria-hidden />}
+          {prepError ? "" : letterReady ? "布景好了" : "幕布后面正在布景…"}
+        </span>
+        {!prepError && (
+          <span className="meta-italic" style={{ fontStyle: "normal", color: "var(--faint)", fontSize: 11.5 }}>
+            {cleared > 0 ? `已消掉 ${cleared} 组` : "拖动或点两下,把一样的凑成三个"}
+          </span>
+        )}
+      </div>
+
+      {/* 回信抵达:整页压暗,一封信弹在遮罩之上,等用户拆开 */}
+      {letterReady && !prepError && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 20, background: "var(--scrim)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="is-pop" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <button
               onClick={openLetter}
@@ -179,35 +258,28 @@ export default function Reflect({
               </span>
             </button>
           </div>
-          </div>
-        ) : (
-          /* 占位符:等待时的冥想/小游戏方向未定,先留空(gingham = 空白待填,kit §3) */
-          <div
-            className="gingham"
-            style={{
-              flex: 1,
-              borderRadius: "var(--r-panel)",
-              border: "1.5px dashed var(--slot-border)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: 24,
-            }}
-          >
-            <span className="meta-italic" style={{ fontSize: 13.5 }}>正在等回信…</span>
-            <span className="meta-italic" style={{ fontSize: 12, color: "var(--faint)", textAlign: "center", lineHeight: 1.7 }}>
-              (等待时的小游戏 / 冥想,这里先留空)
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* 底部状态 */}
-      <div className="meta-italic" style={{ textAlign: "center", marginTop: 14, flexShrink: 0 }}>
-        {prepError ? "" : letterReady ? "布景好了" : "幕布后面正在布景…"}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+
+/* 只在这一帧用到的动效,不进 globals.css */
+const REFLECT_CSS = `
+.rf-quote { animation: rfQuoteIn 420ms var(--ease-soft) both; }
+@keyframes rfQuoteIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.rf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--story);
+  animation: rfBreathe 1.8s var(--ease-soft) infinite;
+}
+@keyframes rfBreathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+`;
