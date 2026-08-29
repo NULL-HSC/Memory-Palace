@@ -3,9 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DialogueTurn, Persona, SpeakerTurn, Story } from "@/lib/types";
 import { NARRATOR_ID } from "@/lib/types";
-import { runTurn, type TurnMode } from "@/lib/api";
+import { runTurn, transcribeAudio, type TurnMode } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
-import { TypeText } from "../ui";
+import { TypeText, Waveform } from "../ui";
 import SandplayStage from "../scene/SandplayStage";
 import ChatInput from "../ui/ChatInput";
 
@@ -182,6 +182,12 @@ export default function F4Sandplay({
     return () => {
       aliveRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+      if (recorderRef.current) {
+        recorderRef.current.onstop = null;
+        recorderRef.current.stream.getTracks().forEach((t) => t.stop());
+        if (recorderRef.current.state !== "inactive") recorderRef.current.stop();
+      }
       resolverRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,7 +213,82 @@ export default function F4Sandplay({
   };
 
   const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
-  const [micNote, setMicNote] = useState(false);
+
+  /* ── 语音发言(coding-agent 式:点 mic → 输入条变实时录音条;再点 → 转写落进输入框,
+     用户确认/修改后再手动发送;转写走真接口 transcribeAudio,失败提示不挡路) ── */
+  const [voice, setVoice] = useState<"idle" | "recording" | "transcribing">("idle");
+  const [voiceSec, setVoiceSec] = useState(0);
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const voiceTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const showVoiceNote = (text: string) => {
+    setVoiceNote(text);
+    setTimeout(() => setVoiceNote(null), 2200);
+  };
+
+  const startVoice = async () => {
+    if (voice !== "idle") return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      showVoiceNote("这个设备用不了麦克风,还是打字吧");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      recorderRef.current = rec;
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        if (blob.size === 0) {
+          setVoice("idle");
+          return;
+        }
+        const ext = (rec.mimeType || "").includes("mp4") ? "mp4" : "webm";
+        setVoice("transcribing");
+        transcribeAudio(blob, `voice.${ext}`)
+          .then((text) => {
+            // 转写结果落进输入框,追加在已有文字后,用户确认后再发
+            setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
+            setVoice("idle");
+          })
+          .catch(() => {
+            setVoice("idle");
+            showVoiceNote("没听清,再试一次");
+          });
+      };
+      rec.start();
+      setVoiceSec(0);
+      voiceTickRef.current = setInterval(() => setVoiceSec((s) => s + 1), 1000);
+      setVoice("recording");
+    } catch {
+      showVoiceNote("没拿到麦克风权限,还是打字吧");
+    }
+  };
+
+  const stopVoice = (cancel: boolean) => {
+    if (voiceTickRef.current) {
+      clearInterval(voiceTickRef.current);
+      voiceTickRef.current = null;
+    }
+    const rec = recorderRef.current;
+    if (!rec || rec.state === "inactive") {
+      setVoice("idle");
+      return;
+    }
+    if (cancel) {
+      rec.onstop = () => rec.stream.getTracks().forEach((t) => t.stop());
+      rec.stop();
+      setVoice("idle");
+      return;
+    }
+    rec.stop(); // 完成:onstop 里走转写
+  };
 
   /* 旁白(上帝视角):后端判断时机,回复流里 speakerId = narrator 的一条。
      不走普通聊天气泡 —— 最新一条钉在聊天区顶部,样式完全不同(深底);流式时逐字吐在横幅里 */
@@ -257,45 +338,6 @@ export default function F4Sandplay({
           )}
         </div>
 
-        {/* ══ 放映框:sky 立体外框(硬底边)+ 内嵌舞台 + 进度条 ══ */}
-        <div
-          style={{
-            margin: "14px var(--screen-x) 0",
-            background: "var(--sky)",
-            borderRadius: "var(--r-panel)",
-            padding: 10,
-            boxShadow: "0 5px 0 var(--sky-under), var(--lift-2)",
-            flexShrink: 0,
-          }}
-        >
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "16 / 9",
-              borderRadius: "var(--r-chip)",
-              overflow: "hidden",
-              background: "var(--mist)",
-            }}
-          >
-            <div style={{ position: "absolute", inset: 0 }}>
-              <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
-            </div>
-          </div>
-          {/* 进度条(装饰,真视频接入后联动) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 9, padding: "0 2px" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-blue)", flexShrink: 0 }} />
-            <span style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(18,85,113,0.25)" }} />
-            <span style={{ fontSize: 11, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M11 5L6 9H2v6h4l5 4V5z" />
-              <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-            </svg>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-            </svg>
-          </div>
-        </div>
 
         {/* ══ 旁白横幅:上帝视角的客观陈述,钉在聊天区顶部,与所有角色气泡完全区分 ══ */}
         {(narratorStreaming || narratorLatest) && (
@@ -322,7 +364,7 @@ export default function F4Sandplay({
           </div>
         )}
 
-        {/* ══ 群聊列表 ══ */}
+        {/* ══ 群聊列表(视频放映卡也在流里:随对话自然被顶上去) ══ */}
         <div
           ref={scrollRef}
           style={{
@@ -335,6 +377,46 @@ export default function F4Sandplay({
             gap: 12,
           }}
         >
+          {/* 放映卡:拍立得形式(渐变描边卡 + 裱框内阴影 + 底 mat 进度条),全局一致 */}
+          <div className="card-frame" style={{ borderRadius: "var(--r-panel)", padding: "10px 10px 0", boxShadow: "var(--lift-3)", flexShrink: 0 }}>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "16 / 9",
+                borderRadius: "var(--r-photo)",
+                overflow: "hidden",
+                background: "var(--mist)",
+              }}
+            >
+              <div style={{ position: "absolute", inset: 0 }}>
+                <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
+              </div>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+            {/* 底 mat:进度条(装饰,真视频接入后联动) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 2px 11px" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-blue)", flexShrink: 0 }} />
+              <span style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(18,85,113,0.25)" }} />
+              <span style={{ fontSize: 11, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h-3" />
+              </svg>
+            </div>
+          </div>
+
           {messages.map((m) =>
             m.speakerId === NARRATOR_ID ? null : m.speakerId === "user" ? (
               <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 8, animation: "bubbleIn 300ms var(--ease-soft) both" }}>
@@ -398,40 +480,117 @@ export default function F4Sandplay({
             <path d="M0 5 Q24 0 48 5 T97 5 T146 5 T195 5 T244 5 T293 5 T342 5 T390 5" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
           </svg>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button
-              onClick={() => {
-                setMicNote(true);
-                setTimeout(() => setMicNote(false), 1800);
-              }}
-              aria-label="语音发言"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 46,
-                height: 46,
-                borderRadius: "50%",
-                background: "var(--cream)",
-                boxShadow: "var(--lift-1)",
-                flexShrink: 0,
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
-                <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
-              </svg>
-            </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <ChatInput
-                value={input}
-                onChange={setInput}
-                onSend={send}
-                placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
-              />
-            </div>
+            {voice === "idle" ? (
+              <>
+                <button
+                  onClick={startVoice}
+                  aria-label="语音发言"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 46,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "var(--cream)",
+                    boxShadow: "var(--lift-1)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
+                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
+                  </svg>
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <ChatInput
+                    value={input}
+                    onChange={setInput}
+                    onSend={send}
+                    placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
+                  />
+                </div>
+              </>
+            ) : (
+              /* 语音实时交互条:左取消 / 中波形+计时(或整理中)/ 右完成 */
+              <>
+                <button
+                  onClick={() => stopVoice(true)}
+                  disabled={voice === "transcribing"}
+                  aria-label="取消语音"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 46,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "var(--cream)",
+                    boxShadow: "var(--lift-1)",
+                    flexShrink: 0,
+                    opacity: voice === "transcribing" ? 0.45 : 1,
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: 46,
+                    borderRadius: 23,
+                    background: "var(--cream)",
+                    boxShadow: "var(--lift-1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    padding: "0 16px",
+                    position: "relative",
+                  }}
+                >
+                  {voice === "recording" && (
+                    <>
+                      {/* 录音中:coral 双涟漪(复用 listen keyframes,同 F2) */}
+                      <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: 23, border: "1.5px solid var(--coral)", animation: "listen 1.8s ease-out infinite", pointerEvents: "none" }} />
+                      <Waveform active />
+                      <span style={{ fontSize: 13, color: "var(--ink)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+                        {Math.floor(voiceSec / 60)}:{String(voiceSec % 60).padStart(2, "0")}
+                      </span>
+                    </>
+                  )}
+                  {voice === "transcribing" && (
+                    <span className="meta-italic" style={{ fontSize: 13 }}>整理成文字…</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => stopVoice(false)}
+                  disabled={voice === "transcribing"}
+                  aria-label="完成语音"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 46,
+                    height: 46,
+                    borderRadius: "50%",
+                    background: "var(--butter)",
+                    boxShadow: "0 3px 0 var(--butter-under)",
+                    flexShrink: 0,
+                    opacity: voice === "transcribing" ? 0.45 : 1,
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 12.5l5 5L20 6.5" />
+                  </svg>
+                </button>
+              </>
+            )}
           </div>
-          {/* mic 占位提示 */}
-          {micNote && (
+          {/* 语音提示条 */}
+          {voiceNote && (
             <div
               style={{
                 position: "absolute",
@@ -448,7 +607,7 @@ export default function F4Sandplay({
                 whiteSpace: "nowrap",
               }}
             >
-              语音发言稍后开放
+              {voiceNote}
             </div>
           )}
         </div>
