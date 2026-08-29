@@ -32,25 +32,25 @@ function fan(d: number) {
 }
 
 /* 每张小卡头顶一枚夹子,不同颜色轮换;夹在卡内,随卡一起移动(2026-08-29 产品口径,推翻"钉墙"版) */
-const CLIP_COLORS = ["var(--story)", "var(--butter)", "var(--ink-blue)", "var(--sky)"];
+const CLIP_COLORS = ["rgba(47,159,200,0.55)", "rgba(255,216,106,0.7)", "rgba(23,106,145,0.5)", "rgba(142,212,232,0.85)"];
 
-function CardClip({ color }: { color: string }) {
+function CardClip({ color, x = 115 }: { color: string; x?: number }) {
   return (
     <svg
       aria-hidden
       width="26"
-      height="34"
-      viewBox="0 0 26 34"
-      style={{ position: "absolute", left: "50%", top: -20, transform: "translateX(-50%)", zIndex: 2, pointerEvents: "none" }}
+      height="330"
+      viewBox="0 0 26 330"
+      style={{ position: "absolute", left: x - 13, top: -304, zIndex: 2, pointerEvents: "none" }}
     >
-      {/* 短绳头 */}
-      <line x1="13" y1="0" x2="13" y2="9" stroke={color} strokeWidth="1.8" />
+      {/* 挂绳:一路向上延伸(与定墙夹同款比例) */}
+      <line x1="13" y1="0" x2="13" y2="307" stroke={color} strokeWidth="1.8" />
       {/* 金属提手三角 */}
-      <path d="M13 7 L5.5 23 L20.5 23 Z" fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M13 305 L5.5 321 L20.5 321 Z" fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
       {/* 夹子主体:咬住卡片上沿 */}
-      <rect x="4" y="21" width="18" height="13" rx="4.5" fill={color} />
+      <rect x="4" y="319" width="18" height="17" rx="4.5" fill={color} />
       {/* 夹身凹槽 */}
-      <rect x="9" y="26.5" width="8" height="3" rx="1.5" fill="var(--cream)" opacity="0.85" />
+      <rect x="9" y="325" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
     </svg>
   );
 }
@@ -293,7 +293,9 @@ export default function F1Home({
                 }}
               >
                 {/* 每张卡自己的夹子(颜色轮换),在卡内 → 随卡一起移动 */}
-                <CardClip color={CLIP_COLORS[i % CLIP_COLORS.length]} />
+                {[72, 158].map((x) => (
+                  <CardClip key={x} x={x} color={CLIP_COLORS[i % CLIP_COLORS.length]} />
+                ))}
                 <div
                   className={i === front ? "anim-float" : undefined}
                   style={i === front ? { filter: "drop-shadow(0 6px 12px rgba(15,45,66,0.10))" } : undefined}
@@ -322,7 +324,9 @@ export default function F1Home({
               })(),
             }}
           >
-            <CardClip color={CLIP_COLORS[stories.length % CLIP_COLORS.length]} />
+            {[72, 158].map((x) => (
+              <CardClip key={x} x={x} color={CLIP_COLORS[stories.length % CLIP_COLORS.length]} />
+            ))}
             <BlankMount />
             <span
               aria-hidden
