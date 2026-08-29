@@ -68,7 +68,7 @@ export default function F3Draft({
           </svg>
         </button>
         <span className="nav-title">新故事</span>
-        <span style={{ minWidth: 44, textAlign: "right", fontSize: 14, fontStyle: "italic", color: "var(--placeholder)" }}>草稿</span>
+        <span className="nav-side" />
       </div>
 
       {/* 封面：Review 裱卡，居中 */}
