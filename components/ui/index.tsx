@@ -9,10 +9,10 @@ import { characterById } from "@/lib/mock/characters";
    封面始终 object-fit: cover（交付 ≥206×244，主体居中）。 */
 
 const VARIANTS = {
-  focused: { w: 230, h: 296, pad: "12px 12px 40px", shadow: "var(--shadow-print-focus)", border: "none" },
-  mid: { w: 198, h: 255, pad: "10px 10px 34px", shadow: "var(--shadow-print-mid)", border: "none" },
-  edge: { w: 166, h: 214, pad: "8px 8px 28px", shadow: "none", border: "none" },
-  review: { w: 186, h: 240, pad: "10px 10px 34px", shadow: "var(--shadow-print-review)", border: "none" },
+  focused: { w: 230, h: 296, pad: "12px 12px 56px", shadow: "var(--shadow-print-focus)" },
+  mid: { w: 198, h: 255, pad: "10px 10px 44px", shadow: "var(--shadow-print-mid)" },
+  edge: { w: 166, h: 214, pad: "8px 8px 32px", shadow: "none" },
+  review: { w: 186, h: 240, pad: "10px 10px 44px", shadow: "var(--shadow-print-review)" },
 } as const;
 
 export type PrintVariant = keyof typeof VARIANTS;
@@ -54,13 +54,15 @@ export function CoverArt({ cover }: { cover: string }) {
 export function MountedPrint({
   variant = "mid",
   cover,
-  checked,
+  caption,
+  date,
   style,
   onClick,
 }: {
   variant?: PrintVariant;
   cover?: string;
-  checked?: boolean;
+  caption?: string; // 标题写在底 mat 上,手写字(kit polaroid__caption)
+  date?: string;
   style?: React.CSSProperties;
   onClick?: () => void;
 }) {
@@ -72,8 +74,8 @@ export function MountedPrint({
         width: v.w,
         height: v.h,
         background: "var(--raised)",
-        border: `1px solid ${v.border}`,
-        borderRadius: 16,
+        border: "none",
+        borderRadius: "var(--r-panel)",
         padding: v.pad,
         boxShadow: v.shadow,
         position: "relative",
@@ -92,24 +94,35 @@ export function MountedPrint({
       >
         <CoverArt cover={cover ?? "sage"} />
       </span>
-      {checked && (
+      {caption && (
         <span
           style={{
             position: "absolute",
-            right: 12,
-            bottom: 10,
-            width: 24,
-            height: 24,
-            borderRadius: "50%",
-            background: "var(--mist)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            left: 10,
+            right: 10,
+            bottom: 8,
+            textAlign: "center",
+            fontFamily: "var(--font-hand)",
+            color: "var(--ink-blue)",
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 13l5 5L20 6" />
-          </svg>
+          <span
+            style={{
+              display: "block",
+              fontSize: variant === "edge" ? 15 : 21,
+              lineHeight: 1.2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {caption}
+          </span>
+          {date && (
+            <span style={{ display: "block", fontSize: 11, marginTop: 2, color: "rgba(23,106,145,0.7)" }}>
+              {date}
+            </span>
+          )}
         </span>
       )}
     </button>

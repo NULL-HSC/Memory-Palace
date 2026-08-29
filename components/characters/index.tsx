@@ -18,7 +18,7 @@ const AVATAR_SRC: Record<FaceId, string> = {
 };
 
 /** companion（用户自己的角色）：My Space 勋章 / Speak It 倾听者 */
-export const COMPANION_SRC = "/avatars/avatar.png";
+export const COMPANION_SRC = "/avatars/companion.png";
 
 export interface AvatarProps {
   id: FaceId;

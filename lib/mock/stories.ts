@@ -4,29 +4,29 @@ import type { Story } from "../types";
 export const SEED_STORIES: Story[] = [
   {
     id: "seed-1",
-    title: "A Day About Courage",
-    date: "the twelfth of June, 2024",
+    title: "鼓起勇气的一天",
+    date: "2024年6月12日",
     cover: "sage",
     transcript:
-      "I finally spoke up in the meeting today. My hands were shaking the whole time, but I said the thing I had been holding for weeks. Nobody laughed. Actually, two people nodded.",
+      "今天开会我终于把话说出来了。手一直在抖,但憋了好几周的那句话,我说出口了。没有人笑我。其实,有两个人还点了点头。",
     createdAt: new Date("2024-06-12T20:30:00").getTime(),
   },
   {
     id: "seed-2",
-    title: "The Quiet Win at Noon",
-    date: "the third of August, 2026",
+    title: "午间的小胜利",
+    date: "2026年8月3日",
     cover: "blush",
     transcript:
-      "Lunch alone on the rooftop. I used to think eating alone meant something was wrong. Today it just felt like mine. The wind was warm and I finished my sandwich slowly.",
+      "中午一个人在天台吃午饭。以前总觉得一个人吃饭是哪里不对劲。今天只觉得,这是属于我自己的时间。风很暖,我慢慢地把三明治吃完了。",
     createdAt: new Date("2026-08-03T13:10:00").getTime(),
   },
   {
     id: "seed-3",
-    title: "An Almost-Phone-Call",
-    date: "the twenty-first of August, 2026",
+    title: "一通没拨出去的电话",
+    date: "2026年8月21日",
     cover: "lavender",
     transcript:
-      "I almost called my mom tonight. I typed the number and stared at it. I didn't press call, but I wrote down what I wanted to say. Maybe that's a first step. Maybe tomorrow.",
+      "今晚差点给妈妈打了电话。号码都输好了,我盯着看了很久。最后没拨出去,但把想说的话写了下来。也许这算第一步吧。也许,明天。",
     createdAt: new Date("2026-08-21T22:05:00").getTime(),
   },
 ];

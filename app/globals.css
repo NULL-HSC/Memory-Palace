@@ -26,6 +26,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "XiaolaiSC";
+  src: url("/fonts/XiaolaiSC-Regular.ttf") format("truetype");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
   font-family: "Quicksand";
   src: url("/fonts/Quicksand-500.woff2") format("woff2");
   font-weight: 500;
@@ -80,15 +86,15 @@
   --r-photo: 6px; /* 唯一近直角:相框内照片 */
 
   /* ---- 阴影:墨蓝调,禁止灰/黑 ---- */
-  --lift-1: 0 3px 10px rgba(23, 106, 145, 0.12);
-  --lift-2: 0 8px 20px rgba(23, 106, 145, 0.16);
-  --lift-3: 0 16px 34px rgba(23, 106, 145, 0.2);
+  --lift-1: 0 3px 12px rgba(23, 106, 145, 0.07);
+  --lift-2: 0 10px 24px rgba(23, 106, 145, 0.09);
+  --lift-3: 0 18px 38px rgba(23, 106, 145, 0.12);
   --press-butter: 0 4px 0 var(--butter-under);
   --press-sky: 0 4px 0 var(--sky-under);
 
   /* ---- 字体 ---- */
-  --font-hand: "Shantell Sans", "PingFang SC", "Comic Sans MS", cursive;
-  --font-ui: "Quicksand", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-hand: "Shantell Sans", "XiaolaiSC", "PingFang SC", cursive;
+  --font-ui: "Quicksand", "XiaolaiSC", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
   --t-display: 30px;
   --t-title: 22px;
   --t-lead: 19px; /* 按钮 19px/700:大字号对比度阈值,不得下调 */

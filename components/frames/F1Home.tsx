@@ -9,18 +9,21 @@ import { Companion } from "../characters";
  * F1 — My Space（v3 · 手机手感 + 温馨化修订）
  * - 拖拽丝滑化：滑动期间直接写 DOM transform（rAF 节流，不走 React 渲染），
  *   松手才吸附并提交状态；卡片 will-change: transform
- * - 温馨化：卡片圆角、扇形后方暖色氛围光、层级重排（标题/CTA 加大）
+ * - 温馨化：卡片圆角、波浪错位布局、层级重排（标题/CTA 加大）
  * - 交互不变：拖/滑翻牌，点侧卡到最前，点前置卡进沙盘，Create / Pico 开新故事
  */
 
 const STEP = 96;
 const FAN_TRANSITION = "transform 380ms cubic-bezier(0.32, 0.72, 0.32, 1), opacity 380ms cubic-bezier(0.32, 0.72, 0.32, 1)";
 
+/** 波浪布局:前置卡最高,两侧按 1−cos(πd) 一高一低交替;
+ *  滑动时 d 连续变化,卡片就像海浪一样此起彼伏(拖动本身不变,依旧跟手) */
 function fan(d: number) {
   const ad = Math.abs(d);
   const scale = d === 0 ? 1.16 : 0.88 - Math.min(ad * 0.05, 0.26);
+  const waveY = 17 * (1 - Math.cos(Math.PI * d)); // d=±1 时最低 +34px,d=±2 回到高位
   return {
-    transform: `translate(-50%, -50%) translateX(${d * STEP}px) translateY(${ad * 13}px) rotate(${d * 5.5}deg) scale(${scale})`,
+    transform: `translate(-50%, -50%) translateX(${d * STEP}px) translateY(${waveY}px) scale(${scale})`,
     opacity: Math.max(1 - ad * 0.15, 0),
     zIndex: 100 - Math.round(ad * 10),
     visible: ad <= 3.4,
@@ -31,13 +34,11 @@ export default function F1Home({
   onOpenSandplay,
   onNewStory,
   onVisitSpaces,
-  onLogout,
   enterClass = "frame-enter-left",
 }: {
   onOpenSandplay: (storyId: string) => void;
   onNewStory: () => void;
   onVisitSpaces: () => void;
-  onLogout?: () => void;
   enterClass?: string;
 }) {
   const { stories } = useStore();
@@ -130,40 +131,27 @@ export default function F1Home({
 
   return (
     <div className={`frame ${enterClass}`} style={{ padding: 0, overflow: "hidden" }}>
-      {/* ══ 顶部:雾蓝扇贝波浪布带 + 虚线车缝(示意图结构) ══ */}
-      <svg aria-hidden viewBox="0 0 390 106" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 106, pointerEvents: "none" }}>
+      {/* ══ 顶部:雾蓝扇贝波浪布带(拉高,标题/入口都放进来)+ 虚线车缝 ══ */}
+      <svg aria-hidden viewBox="0 0 390 120" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 120, pointerEvents: "none" }}>
         <path d="M0 0 H390 V52 Q365.6 76 341.25 52 Q316.9 76 292.5 52 Q268.1 76 243.75 52 Q219.4 76 195 52 Q170.6 76 146.25 52 Q121.9 76 97.5 52 Q73.1 76 48.75 52 Q24.4 76 0 52 Z" fill="var(--mist)" />
         <path d="M390 44 Q365.6 68 341.25 44 Q316.9 68 292.5 44 Q268.1 68 243.75 44 Q219.4 68 195 44 Q170.6 68 146.25 44 Q121.9 68 97.5 44 Q73.1 68 48.75 44 Q24.4 68 0 44" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
       </svg>
 
-      {/* header:布标签上的标题(示意图:My stories 挂在标签牌上) */}
-      <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--screen-top) var(--screen-x) 0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span className="ribbon" style={{ transform: "rotate(-2deg)" }}>
-            My Stories
-          </span>
-          <span className="count-pill" style={{ fontSize: 13, padding: "2px 10px" }}>
-            {stories.length}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, marginRight: -12 }}>
-          <button onClick={onVisitSpaces} className="nav-side" style={{ justifyContent: "flex-end" }}>
-            <span style={{ fontSize: 14.5, fontStyle: "italic", color: "var(--readable)", borderBottom: "1px solid var(--line-strong)", paddingBottom: 2 }}>
-              Visit other spaces
-            </span>
-          </button>
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              style={{ padding: "2px 12px 4px 12px", fontSize: 11.5, fontStyle: "italic", color: "var(--placeholder)" }}
-            >
-              sign out
-            </button>
-          )}
-        </div>
+      {/* header:进横条;标题轻量近乎融入背景,Visit 入口加重为实心按钮 */}
+      <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "22px var(--screen-x) 0" }}>
+        <span style={{ fontFamily: "var(--font-hand)", fontSize: 20, color: "var(--ink-blue)", opacity: 0.72 }}>
+          我的故事 · {stories.length}
+        </span>
+        <button
+          onClick={onVisitSpaces}
+          className="btn btn--sky"
+          style={{ minHeight: 40, padding: "0 16px", fontSize: 14 }}
+        >
+          看看别人的空间
+        </button>
       </div>
 
-      {/* ══ Gallery：纵深扇形 + 暖色氛围光 ══ */}
+      {/* ══ Gallery：波浪错位(海浪式起伏)+ 氛围光 ══ */}
       <div
         style={{ position: "relative", flex: 1, minHeight: 0, touchAction: "pan-y", cursor: "grab" }}
         onPointerDown={onPointerDown}
@@ -229,7 +217,7 @@ export default function F1Home({
               </span>
             </span>
             <span style={{ position: "absolute", left: 0, right: 0, bottom: 9, textAlign: "center", fontSize: 12.5, fontStyle: "italic", color: "var(--muted)" }}>
-              your first story
+              你的第一个故事
             </span>
           </button>
         ) : (
@@ -255,35 +243,35 @@ export default function F1Home({
                   willChange: "transform",
                 }}
               >
-                {/* 前置卡:挂绳小夹子(示意图手法)+ 缓慢浮动 + 更深投影 */}
+                {/* 前置卡:挂绳小夹子(按签署稿:绳 → 金属提手三角 → 蓝色夹身咬住卡沿)+ 缓慢浮动 + 更深投影 */}
                 {i === front && (
                   <>
                     {[72, 158].map((x) => (
-                      <span key={x} aria-hidden style={{ position: "absolute", left: x, top: -46, width: 0, zIndex: 2, pointerEvents: "none" }}>
-                        <span style={{ display: "block", width: 1.5, height: 34, margin: "0 auto", background: "linear-gradient(var(--sky), var(--story))" }} />
-                        <span
-                          style={{
-                            display: "block",
-                            width: 13,
-                            height: 19,
-                            margin: "0 auto",
-                            borderRadius: 4,
-                            background: "var(--butter)",
-                            boxShadow: "0 2px 4px rgba(23,106,145,0.20)",
-                            position: "relative",
-                          }}
-                        >
-                          <span style={{ position: "absolute", left: 5.2, top: 2, bottom: 2, width: 1.6, background: "rgba(23,106,145,0.22)", borderRadius: 1 }} />
-                        </span>
-                      </span>
+                      <svg
+                        key={x}
+                        aria-hidden
+                        width="26"
+                        height="46"
+                        viewBox="0 0 26 46"
+                        style={{ position: "absolute", left: x - 13, top: -38, zIndex: 2, pointerEvents: "none" }}
+                      >
+                        {/* 挂绳 */}
+                        <line x1="13" y1="0" x2="13" y2="13" stroke="var(--story)" strokeWidth="1.8" />
+                        {/* 金属提手三角 */}
+                        <path d="M13 11 L5.5 27 L20.5 27 Z" fill="none" stroke="var(--story)" strokeWidth="2.2" strokeLinejoin="round" />
+                        {/* 夹子主体:咬住卡片上沿 */}
+                        <rect x="4" y="25" width="18" height="17" rx="4.5" fill="var(--story)" />
+                        {/* 夹身凹槽 */}
+                        <rect x="9" y="31" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
+                      </svg>
                     ))}
                   </>
                 )}
                 <div
                   className={i === front ? "anim-float" : undefined}
-                  style={i === front ? { filter: "drop-shadow(0 22px 32px rgba(23,106,145,0.20))" } : undefined}
+                  style={i === front ? { filter: "drop-shadow(0 20px 34px rgba(23,106,145,0.10))" } : undefined}
                 >
-                  <MountedPrint variant="focused" cover={s.cover} checked={i === front} />
+                  <MountedPrint variant="focused" cover={s.cover} caption={s.title} date={s.date} />
                 </div>
               </div>
             );
@@ -306,29 +294,6 @@ export default function F1Home({
             <BlankMount />
           </div>
         )}
-
-        {/* 标题 + 日期：前置卡正下方，与卡一体 */}
-        {story && (
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "calc(38% + 205px)",
-              transform: "translateX(-50%)",
-              width: 330,
-              textAlign: "center",
-              pointerEvents: "none",
-            }}
-          >
-            {/* 动画放内层：bubbleIn 会覆写 transform，不能和定位 translate 同层 */}
-            <div key={story.id} style={{ animation: "bubbleIn 360ms var(--ease-fan) both" }}>
-              <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>{story.title}</div>
-              <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
-                {story.date}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ══ 底部:波浪地面(示意图)—— companion 脚踩地面,Create 是奶油黄大圆 + ══ */}
@@ -341,7 +306,7 @@ export default function F1Home({
       <div style={{ position: "absolute", left: "var(--screen-x)", bottom: "max(26px, env(safe-area-inset-bottom))", zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <button
           onClick={onNewStory}
-          aria-label="Create the sandplay"
+          aria-label="创建新沙盘"
           style={{
             display: "flex",
             alignItems: "center",
@@ -358,13 +323,13 @@ export default function F1Home({
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
-        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--readable)" }}>new sandplay</span>
+        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--readable)" }}>新沙盘</span>
       </div>
 
       {/* companion:脚踩波浪地面,站在右下角 */}
       <button
         onClick={onNewStory}
-        aria-label="Talk to Pico"
+        aria-label="和小伙伴聊聊"
         style={{ position: "absolute", right: 8, bottom: 16, lineHeight: 0, zIndex: 120 }}
       >
         <span

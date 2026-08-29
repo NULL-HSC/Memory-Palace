@@ -13,7 +13,7 @@ import Reflect from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
-import { USE_BACKEND, hasAccessToken, logout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
+import { USE_BACKEND, hasAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -85,18 +85,6 @@ function Shell() {
       /* 本地存储不可用时仅本次会话生效 */
     }
     handleAuthed();
-  };
-
-  /* 登出:尽力通知后端,本地无论如何清 token 回 auth 帧 */
-  const handleLogout = () => {
-    void logout().catch((error) => console.error("[auth] 后端登出失败,本地登出:", error));
-    setAccessToken(null);
-    try {
-      localStorage.removeItem(DEMO_SKIP_KEY);
-    } catch {
-      /* ignore */
-    }
-    setFrame("auth");
   };
 
   /* T1 · Home → Listening：点 companion / "+" */
@@ -196,7 +184,6 @@ function Shell() {
           }}
           onNewStory={startNewStory}
           onVisitSpaces={() => setFrame("spaces")}
-          onLogout={handleLogout}
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
