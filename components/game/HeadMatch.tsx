@@ -72,7 +72,7 @@ function headStyle(face: Face, pad = 0.94): React.CSSProperties {
    ============================================================ */
 
 const COLS = 6;
-const ROWS = 7;
+const ROWS = 8;
 
 const SWAP_MS = 190; // 交换 / 弹回
 const CLEAR_MS = 250; // 消除
@@ -229,6 +229,12 @@ export default function HeadMatch({
   const onClearRef = useRef(onClear);
   onClearRef.current = onClear;
 
+  const selectedRef = useRef<{ r: number; c: number } | null>(null);
+  const pick = useCallback((next: { r: number; c: number } | null) => {
+    selectedRef.current = next;
+    setSelected(next);
+  }, []);
+
   const commit = useCallback((g: Grid) => {
     gridRef.current = g;
     setGrid(g);
@@ -303,7 +309,7 @@ export default function HeadMatch({
       const before = gridRef.current;
       if (!before[a.r][a.c] || !before[b.r][b.c]) return;
       busyRef.current = true;
-      setSelected(null);
+      pick(null);
 
       const after = swapped(before, a, b);
       commit(after);
@@ -318,7 +324,7 @@ export default function HeadMatch({
       }
       await settle(after);
     },
-    [commit, paused, settle]
+    [commit, paused, pick, settle]
   );
 
   const adjacent = (a: { r: number; c: number }, b: { r: number; c: number }) =>
@@ -352,21 +358,21 @@ export default function HeadMatch({
     dragRef.current = null;
     if (!d || d.fired || busyRef.current || paused) return;
     const here = { r: d.r, c: d.c };
-    setSelected((cur) => {
-      if (!cur) return here;
-      if (cur.r === here.r && cur.c === here.c) return null;
-      if (adjacent(cur, here)) {
-        void trySwap(cur, here);
-        return null;
-      }
-      return here;
-    });
+    const cur = selectedRef.current;
+    if (!cur) return pick(here);
+    if (cur.r === here.r && cur.c === here.c) return pick(null); // 再点一次 = 取消
+    if (adjacent(cur, here)) {
+      pick(null);
+      void trySwap(cur, here);
+      return;
+    }
+    pick(here); // 隔太远:直接改选这一块
   };
 
   /* 回信抵达:收手,别让动画和幕布转场抢戏 */
   useEffect(() => {
-    if (paused) setSelected(null);
-  }, [paused]);
+    if (paused) pick(null);
+  }, [paused, pick]);
 
   const boardW = tile * COLS;
   const boardH = tile * ROWS;
@@ -386,8 +392,8 @@ export default function HeadMatch({
       <style>{HEAD_MATCH_CSS}</style>
 
       <div
-        role="grid"
-        aria-label="等候小游戏:头像消消乐"
+        role="group"
+        aria-label="等候小游戏:头像消消乐,把三个一样的凑到一起"
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
@@ -412,6 +418,8 @@ export default function HeadMatch({
               <div
                 key={cell.id}
                 className={`hm-tile card-frame${isSel ? " card-frame--active" : ""}`}
+                role="img"
+                aria-label={HEAD_ART[cell.face].label}
                 onPointerDown={onPointerDown(r, c)}
                 style={{
                   left: c * tile,
@@ -430,7 +438,7 @@ export default function HeadMatch({
               >
                 {cell.clearing && <span className="hm-burst" aria-hidden />}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={HEAD_ART[cell.face].src} alt={HEAD_ART[cell.face].label} style={headStyle(cell.face)} draggable={false} />
+                <img src={HEAD_ART[cell.face].src} alt="" style={headStyle(cell.face)} draggable={false} />
               </div>
             );
           })
