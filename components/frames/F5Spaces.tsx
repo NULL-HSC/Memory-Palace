@@ -17,7 +17,7 @@ import { CoverArt } from "../ui";
 
 type Tab = "community" | "friends";
 
-/** 角色圆头像(信息流派颗用) */
+/** 角色圆头像:奶白钥匙圈描边,读作「贴在纸上的乙烯贴纸」(guideline §2) */
 function MemberAvatar({ member, size = 40 }: { member: CommunityMember; size?: number }) {
   return (
     <span
@@ -29,6 +29,8 @@ function MemberAvatar({ member, size = 40 }: { member: CommunityMember; size?: n
         flexShrink: 0,
         overflow: "hidden",
         display: "block",
+        border: "2px solid var(--cream)",
+        boxShadow: "var(--lift-1)",
       }}
     >
       <CharacterFace
@@ -40,33 +42,80 @@ function MemberAvatar({ member, size = 40 }: { member: CommunityMember; size?: n
   );
 }
 
-/** 社区信息流里的一张故事卡 */
-function StoryCard({ story, onOpen }: { story: CommunityStory; onOpen: () => void }) {
+/** 闪耀小笔触(材料表:2–3 根蓝色短划,标记「新的/可点的」,每屏最多 2 簇) */
+function Sparkles({ style }: { style?: React.CSSProperties }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" style={style} aria-hidden>
+      <path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5" stroke="var(--story)" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M18.5 4.5v3M17 6h3" stroke="var(--story)" strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
+    </svg>
+  );
+}
+
+/** 和纸胶带(材料表:奶油黄油半透明条 62×22,永远斜 5–10°、永远在角上,每屏最多一条) */
+function WashiTape({ style }: { style?: React.CSSProperties }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        position: "absolute",
+        width: 62,
+        height: 22,
+        background: "rgba(255,216,106,0.85)",
+        boxShadow: "0 1px 3px rgba(15,45,66,0.14)",
+        transform: "rotate(-7deg)",
+        ...style,
+      }}
+    />
+  );
+}
+
+/** 照片凹槽内阴影(kit polaroid__photo::after 同款:让封面读作「裱进框里的真照片」) */
+const PHOTO_INSET = "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)";
+
+/** 社区信息流里的一张故事卡 —— 按主视觉 polaroid 配方:r-panel 圆角 + lift-2 投影 + 照片凹槽 + 微斜钉上墙 */
+function StoryCard({ story, index, onOpen }: { story: CommunityStory; index: number; onOpen: () => void }) {
   const owner = memberById(story.ownerId);
   return (
     <button
       onClick={onOpen}
       style={{
+        position: "relative",
         background: "var(--raised)",
         borderRadius: "var(--r-panel)",
         padding: "12px 12px 14px",
-        boxShadow: "var(--shadow-card)",
+        boxShadow: "var(--lift-2)",
         textAlign: "left",
+        transform: `rotate(${index % 2 === 0 ? -1.1 : 1}deg)`,
       }}
     >
+      {/* 第一张卡贴一条和纸胶带(每屏一条,贴在左上角) */}
+      {index === 0 && <WashiTape style={{ top: -10, left: 20 }} />}
       <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <MemberAvatar member={owner} />
-        <span style={{ minWidth: 0 }}>
+        <span style={{ minWidth: 0, flex: 1 }}>
           <span style={{ display: "block", fontSize: 14, fontWeight: 700 }}>{owner.name}</span>
           <span className="meta-italic" style={{ display: "block", fontSize: 11.5, marginTop: 1 }}>
             和 TA 的{characterById(owner.characterId).name} · {story.date}
           </span>
         </span>
+        {/* 前两张卡的角上来一簇小笔触(每屏 ≤2 簇) */}
+        {index < 2 && story.comments.length > 0 && <Sparkles style={{ flexShrink: 0, opacity: 0.8 }} />}
       </span>
-      <span style={{ position: "relative", display: "block", height: 96, borderRadius: "var(--r-photo)", overflow: "hidden", marginTop: 10 }}>
+      <span
+        style={{
+          position: "relative",
+          display: "block",
+          height: 108,
+          borderRadius: "var(--r-photo)",
+          overflow: "hidden",
+          marginTop: 10,
+        }}
+      >
         <CoverArt cover={story.cover} />
+        <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: PHOTO_INSET, pointerEvents: "none" }} />
       </span>
-      <span style={{ display: "block", fontFamily: "var(--font-hand)", fontSize: 18, color: "var(--ink-blue)", marginTop: 10 }}>
+      <span style={{ display: "block", fontFamily: "var(--font-hand)", fontSize: 18, fontWeight: 600, color: "var(--ink-blue)", marginTop: 10 }}>
         {story.title}
       </span>
       <span
@@ -157,8 +206,8 @@ export default function F5Spaces({
                 TA 还没有公开的故事。
               </span>
             )}
-            {friendStories.map((s) => (
-              <StoryCard key={s.id} story={s} onOpen={() => onOpenStory(s.id)} />
+            {friendStories.map((s, i) => (
+              <StoryCard key={s.id} story={s} index={i} onOpen={() => onOpenStory(s.id)} />
             ))}
           </div>
         </div>
@@ -211,8 +260,8 @@ export default function F5Spaces({
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 14, paddingBottom: 12 }}>
         {tab === "community" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {COMMUNITY_STORIES.map((s) => (
-              <StoryCard key={s.id} story={s} onOpen={() => onOpenStory(s.id)} />
+            {COMMUNITY_STORIES.map((s, i) => (
+              <StoryCard key={s.id} story={s} index={i} onOpen={() => onOpenStory(s.id)} />
             ))}
           </div>
         ) : (
