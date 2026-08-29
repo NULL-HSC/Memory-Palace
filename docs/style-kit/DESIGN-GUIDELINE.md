@@ -179,7 +179,7 @@ These are the vocabulary. Use them; do not invent new ones.
 > |---|---|---|
 > | **Wave band (2.5D)** | Top fabric awning with gradient | Near-white top → Mist body → **Sky only at the scalloped edge**; scallops must be irregular; outer shadow black 5%, x+1/y+2, 2px blur |
 > | **Envelope wings** | Bottom decoration: two overlapping gingham triangles | Hypotenuses run past centre so flaps overlap at the bottom edge; centre stays open cream — never under text |
-> | **Wall clips** | Clip+string fixed to the WALL, not the card | Cards slide under them; string tucks under the band. Z-order: header 103 > band 102 > clips 101 > card 100 |
+> | **Card clips** | One clip per polaroid, colours rotate (story/butter/ink-blue/sky) | The clip belongs to the CARD — it travels with the card through the fan. Supersedes the same-day “wall clips” call (2026-08-29, product reversal). |
 > | **Cinema** | Premiere scene: side curtains + valance + spotlight + Ink-Blue screen bezel | The one place a large dark frame is allowed (the cinema screen) |
 > | **Floor** | Straight warm strip at screen bottom, `--floor` | Replaces the scalloped wave floor; walls stay cream |
 

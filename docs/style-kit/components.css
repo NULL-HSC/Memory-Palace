@@ -58,6 +58,26 @@ a { text-decoration: none; color: inherit; }
   border-radius: var(--r-photo);
 }
 
+/* ---- 1b. Cards ------------------------------------------------ */
+/* Gradient-bordered card. THE global card frame (2026-08-29 product call):
+   the blue border is always a GRADIENT, in two weights —
+   default = LIGHT (Mist → Sky → Mist, a soft alternating blue edge);
+   selected/active = DEEP (Story → Ink Blue → Story).
+   Reference: the character picker — unpicked cards are light, the picked
+   one is deep. Solid ink borders are a bug. Card face stays cream in the
+   padding-box; the gradient lives in the border-box. */
+.card-frame {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--raised), var(--raised)) padding-box,
+    linear-gradient(135deg, var(--mist) 0%, var(--sky) 50%, var(--mist) 100%) border-box;
+}
+.card-frame--active {
+  background:
+    linear-gradient(var(--raised), var(--raised)) padding-box,
+    linear-gradient(135deg, var(--story) 0%, var(--ink-blue) 50%, var(--story) 100%) border-box;
+}
+
 /* ---- 2. Puffy controls ------------------------------------ */
 /* A pressable thing is a slab with a visible underside, not a
    flat rectangle with a blur. Pressing moves it onto its edge. */
@@ -190,11 +210,10 @@ a { text-decoration: none; color: inherit; }
 
 /* Binder clip + string. Use in pairs. The string runs to the top edge. */
 .hang { position: absolute; top: 0; width: 2px; background: var(--story); }
-/* Wall-fixed variant (2026-08-29): the clips belong to the WALL, not the card.
-   They stay put while polaroids slide under them — a card is taken off and
-   hung back onto the same pair. The string must reach up and tuck UNDER the
-   top band. Z-order is part of the contract:
-     header content 103 > top band 102 > wall clips 101 > focused card 100. */
+/* Per-card variant (2026-08-29, product reversal): each polaroid carries ONE clip
+   at its top edge; clip colours rotate (story / butter / ink-blue / sky) and the clip
+   is rendered inside the card so it travels with the fan. Supersedes the wall-fixed
+   variant below, which is no longer used on Home. */
 .hang--wall { z-index: 101; pointer-events: none; }
 
 /* ---- 4. Chrome -------------------------------------------- */

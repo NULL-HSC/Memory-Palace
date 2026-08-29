@@ -31,6 +31,30 @@ function fan(d: number) {
   };
 }
 
+/* 每张小卡头顶一枚夹子,不同颜色轮换;夹在卡内,随卡一起移动(2026-08-29 产品口径,推翻"钉墙"版) */
+const CLIP_COLORS = ["var(--story)", "var(--butter)", "var(--ink-blue)", "var(--sky)"];
+
+function CardClip({ color }: { color: string }) {
+  return (
+    <svg
+      aria-hidden
+      width="26"
+      height="34"
+      viewBox="0 0 26 34"
+      style={{ position: "absolute", left: "50%", top: -20, transform: "translateX(-50%)", zIndex: 2, pointerEvents: "none" }}
+    >
+      {/* 短绳头 */}
+      <line x1="13" y1="0" x2="13" y2="9" stroke={color} strokeWidth="1.8" />
+      {/* 金属提手三角 */}
+      <path d="M13 7 L5.5 23 L20.5 23 Z" fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
+      {/* 夹子主体:咬住卡片上沿 */}
+      <rect x="4" y="21" width="18" height="13" rx="4.5" fill={color} />
+      {/* 夹身凹槽 */}
+      <rect x="9" y="26.5" width="8" height="3" rx="1.5" fill="var(--cream)" opacity="0.85" />
+    </svg>
+  );
+}
+
 export default function F1Home({
   onOpenStory,
   onNewStory,
@@ -139,7 +163,7 @@ export default function F1Home({
         aria-hidden
         viewBox="0 0 390 170"
         preserveAspectRatio="none"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 170, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 170", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
       >
         <defs>
           <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
@@ -268,6 +292,8 @@ export default function F1Home({
                   willChange: "transform",
                 }}
               >
+                {/* 每张卡自己的夹子(颜色轮换),在卡内 → 随卡一起移动 */}
+                <CardClip color={CLIP_COLORS[i % CLIP_COLORS.length]} />
                 <div
                   className={i === front ? "anim-float" : undefined}
                   style={i === front ? { filter: "drop-shadow(0 6px 12px rgba(15,45,66,0.10))" } : undefined}
@@ -296,6 +322,7 @@ export default function F1Home({
               })(),
             }}
           >
+            <CardClip color={CLIP_COLORS[stories.length % CLIP_COLORS.length]} />
             <BlankMount />
             <span
               aria-hidden
@@ -337,30 +364,6 @@ export default function F1Home({
           </button>
         )}
 
-        {/* ══ 固定在墙上的挂绳夹子:不随卡片移动;挂绳一路连到顶部波浪布带底下;图层在卡片之上 ══ */}
-        {stories.length > 0 && (
-          <>
-            {[-50, 50].map((dx) => (
-              <svg
-                key={dx}
-                aria-hidden
-                width="26"
-                height="150"
-                viewBox="0 0 26 150"
-                style={{ position: "absolute", left: `calc(50% + ${dx}px - 13px)`, top: "calc(42% - 320px)", zIndex: 101, pointerEvents: "none" }}
-              >
-                {/* 挂绳:从布带底下一路垂到夹子 */}
-                <line x1="13" y1="0" x2="13" y2="117" stroke="var(--story)" strokeWidth="1.8" />
-                {/* 金属提手三角 */}
-                <path d="M13 115 L5.5 131 L20.5 131 Z" fill="none" stroke="var(--story)" strokeWidth="2.2" strokeLinejoin="round" />
-                {/* 夹子主体:咬住卡片上沿 */}
-                <rect x="4" y="129" width="18" height="17" rx="4.5" fill="var(--story)" />
-                {/* 夹身凹槽 */}
-                <rect x="9" y="135" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
-              </svg>
-            ))}
-          </>
-        )}
       </div>
 
       {/* ══ 底部:平地地板(比背景深一档的色块)—— 拍立得像挂在墙上,companion 站在地上 ══ */}
