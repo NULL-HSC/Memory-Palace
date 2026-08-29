@@ -27,7 +27,7 @@ NEXT_PUBLIC_BACKEND_ACCESS_TOKEN=xxx   # 黑客松短期方案:手工注入 Bear
 | 2 | 认证 | token 注入 | 带 `Authorization: Bearer` 的请求不 401 | token 有效性 |
 | 3 | 新建 session | `POST /api/sessions {final_text}` | 202,拿到 `session_id` | 请求体格式 |
 | 4 | 人设提取 | `GET /sessions/{id}/personas` | 异步产物,前端轮询 ≤60s;`persona_status` 终态正确 | 状态枚举值 |
-| 5 | 群聊 | `POST messages` / `POST reply-runs` + `GET events`(SSE) | `role.delta` 按 `message_id` 聚合成气泡;多角色交错不串话;断线用 `cursor` 重连只收新事件 | SSE 事件格式 |
+| 5 | 群聊 | `GET events`(SSE) + 用户发言时 `POST messages` | `role.delta` 按 `message_id` 聚合成气泡;多角色交错不串话;断线用 `cursor` 重连只收新事件 | SSE 事件格式 |
 | 6 | 视频 | 轮询 `GET /api/sessions/{id}` 的 `video.status` → `GET /api/videos/{video_id}/playback` | 就绪后舞台播真视频;失败时本地舞台兜底正常 | 状态值/播放地址 |
 | 7 | Keep | `PATCH visibility` | 注意映射:前端 `community → public`、`friends → private` | 可见性枚举 |
 

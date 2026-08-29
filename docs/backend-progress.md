@@ -13,10 +13,10 @@
 
 - 统一解包 `{code,data,message}`，Bearer token 由单一 API 层附加；同源代理现在正确保留后端 `/api` 前缀，`/health` 例外。
 - 新建故事:`POST /api/sessions {final_text}` → 等待 `GET personas` → 选角色。
-- 群聊:`POST messages` / `POST reply-runs` 前先打开 `GET events`；`role.delta` 按 `message_id` 分桶，支持多角色交错 delta。
+- 群聊:先打开 `GET events`；用户发言再 `POST messages`（返回 `message_id/turn_id/status`），事件按 `message_id` 分桶，支持多角色交错 delta。
 - 视频:轮询 `GET /api/sessions/{id}` 的 `video.status`，就绪后用 `video.id` 请求 `GET /api/videos/{video_id}/playback`，并在舞台播放。
 - Keep 时调 `PATCH visibility`。后端只有 `private/public`，前端 `community → public`，`friends → private`。
-- 认证、转写、session 列表/详情/删除、消息列表、取消 reply-run 已在 `lib/api.ts` 建好类型化封装，等对应 UI 直接调用。
+- 认证、转写、session 列表/详情/删除、消息列表已在 `lib/api.ts` 建好类型化封装，群聊通过 `messages` + `events` 工作。
 
 ### 待后端关注（按优先级）
 
@@ -61,7 +61,7 @@
    - 事件流必须支持 `Authorization: Bearer` 头(前端用 fetch 流式读取,`EventSource` 无法自定义头)
    - 断线重连:`cursor` 参数回传最后收到的 `event_id`,只发其后的新事件
    - `role.delta` 按 `message_id` 聚合成气泡;多角色并发时不同 `message_id` 的 delta 会交错
-5. **异步语义**:`POST /api/sessions` 与 `POST /api/sessions/{id}/messages` 均为 202;前端拿 `reply_run_id` 后纯靠 SSE 收结果,不轮询。仅视频任务轮询 `GET /api/video-tasks/{task_id}`。
+5. **异步语义**:`POST /api/sessions` 与 `POST /api/sessions/{id}/messages` 均为 202;前端订阅 SSE 收取群聊结果,不调用 reply-runs。仅视频任务轮询会话详情中的 `video.status`。
 6. **小事**:`/health` 返回 `{"status":"ok"}` 裸 JSON 不走信封,前端健康检查按此处理,确认即可。
 
 ### 前端对应状态

@@ -14,6 +14,8 @@ export default function ChatInput({
   placeholder = "写点什么…",
   autoFocus = false,
   ariaLabel = "输入消息",
+  inputRef,
+  onSelectionChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -21,13 +23,30 @@ export default function ChatInput({
   placeholder?: string;
   autoFocus?: boolean;
   ariaLabel?: string;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  onSelectionChange?: (start: number, end: number) => void;
 }) {
+  const reportSelection = (input: HTMLInputElement) => {
+    onSelectionChange?.(input.selectionStart ?? input.value.length, input.selectionEnd ?? input.value.length);
+  };
+
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <input
+        ref={inputRef}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && onSend()}
+        onChange={(e) => {
+          onChange(e.target.value);
+          reportSelection(e.currentTarget);
+        }}
+        onSelect={(e) => reportSelection(e.currentTarget)}
+        onFocus={(e) => reportSelection(e.currentTarget)}
+        onClick={(e) => reportSelection(e.currentTarget)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          console.log("[flow] ChatInput Enter", { textLength: value.trim().length });
+          onSend();
+        }}
         placeholder={placeholder}
         aria-label={ariaLabel}
         autoFocus={autoFocus}
@@ -46,7 +65,10 @@ export default function ChatInput({
         }}
       />
       <button
-        onClick={onSend}
+        onClick={() => {
+          console.log("[flow] ChatInput send click", { textLength: value.trim().length, disabled: !value.trim() });
+          onSend();
+        }}
         disabled={!value.trim()}
         aria-label="发送"
         style={{

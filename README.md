@@ -44,9 +44,8 @@ cp .env.example .env.local
 | `/health` | GET | — | `{ status: "ok" }` | 裸 JSON，不走信封 |
 | `/api/sessions` | POST | `{ final_text }` | `202 + {session_id,video_task_id,...}` | 新建故事与异步生成 |
 | `/api/sessions/{id}/personas` | GET | — | `{items: Persona[]}` | 选带入角色 |
-| `/api/sessions/{id}/messages` | POST | `{persona_id,content}` | `202 + {reply_run_id,message_id,status}` | 用户发言 |
-| `/api/sessions/{id}/reply-runs` | POST | `{persona_id}` | `202 + {reply_run_id,status}` | 无用户新消息时启动回复 |
-| `/api/sessions/{id}/events` | GET | `cursor?` | SSE | `role.delta` 按 `message_id` 聚合 |
+| `/api/sessions/{id}/messages` | POST | `{persona_id,content}` | `202 + {message_id,turn_id,status}` | 用户发言并触发回复 |
+| `/api/sessions/{id}/events` | GET | `cursor?` | SSE | 订阅持久化群聊事件，按 `message_id` 聚合 |
 | `/api/sessions/{id}` | GET | — | `{...,video}` | 会话/人设/视频状态 |
 | `/api/videos/{video_id}/playback` | GET | — | `{playback_url}` | 视频播放地址 |
 | `/api/sessions/{id}/visibility` | PATCH | `{visibility: private|public}` | `data:null` | Keep 时更新 |

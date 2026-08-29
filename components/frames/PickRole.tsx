@@ -32,16 +32,24 @@ export default function PickRole({
   const readyAtEntry = prepared?.personas != null;
 
   const load = () => {
-    if (inflightRef.current === transcript) return;
+    if (inflightRef.current === transcript) {
+      console.log("[flow] PickRole prepare skipped: already in flight", { textLength: transcript.length });
+      return;
+    }
+    console.log("[flow] PickRole prepare start", { textLength: transcript.length, hasPrepared: Boolean(prepared) });
     inflightRef.current = transcript;
     setError(null);
     setPersonas(null);
     prepareSandplay(transcript)
       .then((prep) => {
+        console.log("[flow] PickRole prepare success", { hasSession: Boolean(prep.session), sessionId: prep.session?.session_id, personaCount: prep.personas.length });
         setPersonas(prep.personas);
         setSession(prep.session);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => {
+        console.error("[flow] PickRole prepare failed", e);
+        setError(e instanceof Error ? e.message : String(e));
+      })
       .finally(() => {
         if (inflightRef.current === transcript) inflightRef.current = null;
       });
@@ -49,6 +57,7 @@ export default function PickRole({
 
   useEffect(() => {
     if (prepared?.personas) {
+      console.log("[flow] PickRole using prepared result", { hasSession: Boolean(prepared.session), sessionId: prepared.session?.session_id, personaCount: prepared.personas.length });
       setPersonas(prepared.personas);
       setSession(prepared.session);
       return;

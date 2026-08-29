@@ -3,9 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DialogueTurn, Persona, SpeakerTurn, Story } from "@/lib/types";
 import { NARRATOR_ID } from "@/lib/types";
-import { runTurn, transcribeAudio, type TurnMode } from "@/lib/api";
+import { listMessages, runTurn, transcribeAudio, type TurnMode, USE_BACKEND } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
-import { TypeText, Waveform } from "../ui";
+import { Waveform } from "../ui";
 import StoryPlayer from "../ui/StoryPlayer";
 import ChatInput from "../ui/ChatInput";
 
@@ -20,10 +20,6 @@ import ChatInput from "../ui/ChatInput";
  * 防打架/防卡死:AI 自聊每轮最多 2 位开口、每段沉默期只续一轮;prompt 禁争论禁复读;
  * 轮内串行可见(后者读得到前者本轮发言)。
  */
-
-const WAIT_AFTER_OPENING = 18000;
-const WAIT_AFTER_CONTINUE = 18000;
-const WAIT_AFTER_INVITE = 20000;
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const toTurn = (storyId: string, t: SpeakerTurn): DialogueTurn => ({
@@ -60,6 +56,8 @@ export default function F4Sandplay({
   const [typingId, setTypingId] = useState<string | null>(null);
   const [streaming, setStreaming] = useState<SpeakerTurn | null>(null);
   const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputSelectionRef = useRef({ start: 0, end: 0 });
   const [showEnd, setShowEnd] = useState(false); // 三轮无互动 → 结束弹窗
   const [showLeave, setShowLeave] = useState(false); // 草稿流程返回键 → 二次确认弹窗
   const [llmError, setLlmError] = useState<{ mode: TurnMode; speakers: string[]; after: () => void; userMessage?: string } | null>(null); // 最近失败的一轮,给弹幕区重试入口
@@ -68,7 +66,6 @@ export default function F4Sandplay({
   const runningRef = useRef(false);
   const resolverRef = useRef<(() => void) | null>(null);
   const aliveRef = useRef(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const aiSpeakersRef = useRef(aiSpeakers);
   aiSpeakersRef.current = aiSpeakers;
@@ -83,12 +80,6 @@ export default function F4Sandplay({
 
   /* ── 节奏原语 ── */
 
-  const armTimer = (ms: number, fn: () => void) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      if (aliveRef.current) fn();
-    }, ms);
-  };
 
   /** 依次播出队列里的发言:typing 预告 → 逐字流出 → 落定 */
   async function pump() {
@@ -112,8 +103,19 @@ export default function F4Sandplay({
 
   /** 跑一轮 LLM 发言;失败在弹幕区给重试入口、节奏继续(全真实模式,不塞假数据) */
   async function runRound(mode: TurnMode, speakers: string[], after: () => void, userMessage?: string) {
+    console.log("[flow] F4 runRound", {
+      mode,
+      speakerCount: speakers.length,
+      sessionId: storyRef.current.backendSessionId,
+      userPersonaId: personaRef.current?.id,
+      useBackend: USE_BACKEND,
+      sseEligible: Boolean(USE_BACKEND && storyRef.current.backendSessionId && personaRef.current?.id),
+    });
     // 无人可发言(如短转写只提取到"我")→ 直接跳过本轮,不打 422、不挂重试 chip
-    if (speakers.length === 0) {
+    // 用户 answer 轮仍需 POST /messages，即使后端只提取出了“我”一个人设；
+    // 只有没有 AI 发言人的自动轮次才直接跳过。
+    if (speakers.length === 0 && mode !== "answer") {
+      console.log("[flow] F4 round skipped: no AI speakers", { mode });
       if (aliveRef.current) after();
       return;
     }
@@ -129,9 +131,22 @@ export default function F4Sandplay({
         sessionId: storyRef.current.backendSessionId,
         userPersonaId: personaRef.current?.id,
         userMessage,
+        onStream: (turn, done) => {
+          if (!aliveRef.current) return;
+          setTypingId(done ? null : turn.speakerId);
+          if (!done) {
+            setStreaming(turn);
+            return;
+          }
+          setStreaming(null);
+          const next = toTurn(storyRef.current.id, turn);
+          messagesRef.current = [...messagesRef.current, next];
+          setMessages((current) => [...current, next]);
+        },
       });
       if (!aliveRef.current) return;
       setLlmError(null);
+      if (USE_BACKEND && storyRef.current.backendSessionId && personaRef.current?.id) return;
       if (turns.length > 0) {
         queueRef.current.push(...turns);
         await pump();
@@ -156,18 +171,11 @@ export default function F4Sandplay({
     void runRound(r.mode, r.speakers, r.after, r.userMessage);
   };
 
+  // Automatic opening/continue/invite rounds were removed; this keeps the legacy modal callback inert.
+  const waitForUser = () => undefined;
+
   /* 沉默期推进:continue → invite → 结束弹窗 */
-  function stepContinue() {
-    void runRound("continue", aiSpeakersRef.current, () => armTimer(WAIT_AFTER_CONTINUE, stepInvite));
-  }
-  function stepInvite() {
-    const inviter = aiSpeakersRef.current[0];
-    void runRound("invite", inviter ? [inviter] : [], () => armTimer(WAIT_AFTER_INVITE, () => setShowEnd(true)));
-  }
   /** 一轮活动结束后:等用户 WAIT_AFTER_OPENING,不应则进入沉默期推进 */
-  function waitForUser() {
-    armTimer(WAIT_AFTER_OPENING, stepContinue);
-  }
 
   useEffect(() => {
     aliveRef.current = true;
@@ -178,16 +186,34 @@ export default function F4Sandplay({
     setShowEnd(false);
     setShowLeave(false);
     setLlmError(null);
-    void runRound("opening", aiSpeakersRef.current, waitForUser);
+    if (USE_BACKEND && story.backendSessionId) {
+      console.log("[flow] F4 loading messages", { sessionId: story.backendSessionId });
+      void listMessages(story.backendSessionId)
+        .then((result) => {
+          if (!aliveRef.current) return;
+          const loaded = result.items.map((message) => ({
+            storyId: story.id,
+            speakerId: message.sender_id,
+            text: message.content,
+            ts: Date.parse(message.created_at) || Date.now(),
+          }));
+          console.log("[flow] F4 messages loaded", { sessionId: story.backendSessionId, count: loaded.length });
+          messagesRef.current = loaded;
+          setMessages(loaded);
+        })
+        .catch((error) => console.error("[flow] F4 messages load failed", { sessionId: story.backendSessionId, error }));
+    }
     return () => {
       aliveRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
+      voiceRequestRef.current += 1;
       if (voiceTickRef.current) clearInterval(voiceTickRef.current);
       if (recorderRef.current) {
         recorderRef.current.onstop = null;
         recorderRef.current.stream.getTracks().forEach((t) => t.stop());
         if (recorderRef.current.state !== "inactive") recorderRef.current.stop();
+        recorderRef.current = null;
       }
+      chunksRef.current = [];
       resolverRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,9 +225,29 @@ export default function F4Sandplay({
 
   const send = () => {
     const text = input.trim();
-    if (!text) return;
+    console.log("[flow] F4 send", {
+      textLength: text.length,
+      aiSpeakerCount: aiSpeakersRef.current.length,
+      sessionId: storyRef.current.backendSessionId,
+      userPersonaId: personaRef.current?.id,
+      useBackend: USE_BACKEND,
+    });
+    if (!text) {
+      console.log("[flow] F4 send skipped: empty input");
+      return;
+    }
+    if (!USE_BACKEND || !storyRef.current.backendSessionId || !personaRef.current?.id) {
+      console.error("[flow] F4 send skipped: backend session/persona missing", {
+        useBackend: USE_BACKEND,
+        sessionId: storyRef.current.backendSessionId,
+        userPersonaId: personaRef.current?.id,
+      });
+      return;
+    }
     setInput("");
-    if (timerRef.current) clearTimeout(timerRef.current);
+    // 每次用户发言都从一个全新的后端消息气泡开始，避免沿用上一轮的 streaming 状态。
+    setStreaming(null);
+    setTypingId(null);
     setShowEnd(false); // 用户回来了 → 收起结束弹窗
     const userTurn = toTurn(story.id, { speakerId: "user", text });
     // ref 平时靠重渲染赋值,但 runRound 是在 setMessages 之后同步调用的 —— 那时还没重渲染。
@@ -209,7 +255,7 @@ export default function F4Sandplay({
     messagesRef.current = [...messagesRef.current, userTurn];
     setMessages((m) => [...m, userTurn]);
     // 用户开口:所有 AI 都要思考如何回应用户,然后节奏重置
-    void runRound("answer", aiSpeakersRef.current, waitForUser, text);
+    void runRound("answer", aiSpeakersRef.current, () => {}, text);
   };
 
 
@@ -222,44 +268,95 @@ export default function F4Sandplay({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const voiceTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceRequestRef = useRef(0);
+  const transcriptInsertionRef = useRef({ start: 0, end: 0 });
 
   const showVoiceNote = (text: string) => {
     setVoiceNote(text);
     setTimeout(() => setVoiceNote(null), 2200);
   };
 
+  const clearVoiceCapture = (recorder = recorderRef.current) => {
+    if (voiceTickRef.current) {
+      clearInterval(voiceTickRef.current);
+      voiceTickRef.current = null;
+    }
+    chunksRef.current = [];
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stream.getTracks().forEach((track) => track.stop());
+      if (recorder.state !== "inactive") recorder.stop();
+    }
+    if (recorderRef.current === recorder) recorderRef.current = null;
+  };
+
+  const insertTranscript = (text: string) => {
+    const transcript = text.trim();
+    if (!transcript) {
+      showVoiceNote("没有识别到内容，再试一次");
+      return;
+    }
+
+    setInput((current) => {
+      const { start, end } = transcriptInsertionRef.current;
+      const insertionStart = Math.max(0, Math.min(start, current.length));
+      const insertionEnd = Math.max(insertionStart, Math.min(end, current.length));
+      const next = `${current.slice(0, insertionStart)}${transcript}${current.slice(insertionEnd)}`;
+      const caret = insertionStart + transcript.length;
+      inputSelectionRef.current = { start: caret, end: caret };
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.setSelectionRange(caret, caret);
+      });
+      return next;
+    });
+  };
+
   const startVoice = async () => {
-    if (voice !== "idle") return;
+    if (voice !== "idle" || recorderRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       showVoiceNote("这个设备用不了麦克风,还是打字吧");
       return;
     }
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recordingStream = stream;
+      const rec = new MediaRecorder(recordingStream);
+      const { selectionStart, selectionEnd } = inputRef.current ?? {};
+      transcriptInsertionRef.current = {
+        start: selectionStart ?? inputSelectionRef.current.start,
+        end: selectionEnd ?? inputSelectionRef.current.end,
+      };
       recorderRef.current = rec;
       chunksRef.current = [];
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       rec.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+        recordingStream.getTracks().forEach((t) => t.stop());
+        const chunks = chunksRef.current;
+        chunksRef.current = [];
+        if (recorderRef.current === rec) recorderRef.current = null;
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
         if (blob.size === 0) {
           setVoice("idle");
           return;
         }
         const ext = (rec.mimeType || "").includes("mp4") ? "mp4" : "webm";
+        const requestId = ++voiceRequestRef.current;
         setVoice("transcribing");
         transcribeAudio(blob, `voice.${ext}`)
           .then((text) => {
-            // 转写结果落进输入框,追加在已有文字后,用户确认后再发
-            setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
-            setVoice("idle");
+            if (aliveRef.current && voiceRequestRef.current === requestId) insertTranscript(text);
           })
           .catch(() => {
-            setVoice("idle");
-            showVoiceNote("没听清,再试一次");
+            if (aliveRef.current && voiceRequestRef.current === requestId) showVoiceNote("没听清，再试一次");
+          })
+          .finally(() => {
+            chunksRef.current = [];
+            if (aliveRef.current && voiceRequestRef.current === requestId) setVoice("idle");
           });
       };
       rec.start();
@@ -267,25 +364,28 @@ export default function F4Sandplay({
       voiceTickRef.current = setInterval(() => setVoiceSec((s) => s + 1), 1000);
       setVoice("recording");
     } catch {
+      clearVoiceCapture();
+      stream?.getTracks().forEach((track) => track.stop());
       showVoiceNote("没拿到麦克风权限,还是打字吧");
     }
   };
 
   const stopVoice = (cancel: boolean) => {
-    if (voiceTickRef.current) {
-      clearInterval(voiceTickRef.current);
-      voiceTickRef.current = null;
-    }
     const rec = recorderRef.current;
     if (!rec || rec.state === "inactive") {
+      chunksRef.current = [];
       setVoice("idle");
       return;
     }
     if (cancel) {
-      rec.onstop = () => rec.stream.getTracks().forEach((t) => t.stop());
-      rec.stop();
+      voiceRequestRef.current += 1;
+      clearVoiceCapture(rec);
       setVoice("idle");
       return;
+    }
+    if (voiceTickRef.current) {
+      clearInterval(voiceTickRef.current);
+      voiceTickRef.current = null;
     }
     rec.stop(); // 完成:onstop 里走转写
   };
@@ -294,13 +394,6 @@ export default function F4Sandplay({
      不走普通聊天气泡 —— 最新一条钉在聊天区顶部,样式完全不同(深底);流式时逐字吐在横幅里 */
   const narratorStreaming = streaming?.speakerId === NARRATOR_ID ? streaming : null;
   const narratorLatest = [...messages].reverse().find((m) => m.speakerId === NARRATOR_ID);
-  const settleStreaming = () => {
-    const done = streaming;
-    if (!done) return;
-    setMessages((m) => [...m, toTurn(story.id, done)]);
-    resolverRef.current?.();
-  };
-
   return (
     <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* ══ 顶部:雾蓝波浪布条(短版,同 Home 的手法) ══ */}
@@ -358,7 +451,7 @@ export default function F4Sandplay({
                 aria-live={narratorStreaming ? "polite" : undefined}
                 style={{ display: "block", marginTop: 4, fontSize: 13.5, fontStyle: "italic", lineHeight: 1.6, color: "var(--text-on-ink)" }}
               >
-                {narratorStreaming ? <TypeText text={narratorStreaming.text} speed={26} onDone={settleStreaming} /> : narratorLatest?.text}
+                {narratorStreaming ? narratorStreaming.text : narratorLatest?.text}
               </span>
             </div>
           </div>
@@ -429,7 +522,6 @@ export default function F4Sandplay({
             <ChatMessage
               speaker={personaById(streaming.speakerId)}
               streamingText={streaming.text}
-              onStreamDone={settleStreaming}
             />
           )}
           {typingId && typingId !== NARRATOR_ID && <ChatTyping speaker={personaById(typingId)} />}
@@ -494,6 +586,10 @@ export default function F4Sandplay({
                   <ChatInput
                     value={input}
                     onChange={setInput}
+                    inputRef={inputRef}
+                    onSelectionChange={(start, end) => {
+                      inputSelectionRef.current = { start, end };
+                    }}
                     onSend={send}
                     placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
                   />
@@ -708,12 +804,10 @@ function ChatMessage({
   speaker,
   text,
   streamingText,
-  onStreamDone,
 }: {
   speaker?: Persona;
   text?: string;
   streamingText?: string;
-  onStreamDone?: () => void;
 }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start", animation: "bubbleIn 300ms var(--ease-soft) both" }}>
@@ -731,7 +825,7 @@ function ChatMessage({
           }}
         >
           <span aria-live={streamingText != null ? "polite" : undefined} style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.5, color: "var(--ink)" }}>
-            {streamingText != null ? <TypeText text={streamingText} speed={26} onDone={onStreamDone} /> : text}
+            {streamingText != null ? streamingText : text}
           </span>
         </div>
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { suggestTitle } from "@/lib/api";
+import React, { useState } from "react";
 import { longDate } from "@/lib/mock/titles";
 import { MountedPrint } from "../ui";
 
@@ -21,10 +20,12 @@ const VISIBILITY_OPTIONS = [
 
 export default function F3Draft({
   transcript,
+  title,
   onBack,
   onKeep,
 }: {
   transcript: string;
+  title: string;
   onBack: () => void;
   onKeep: (draft: {
     title: string;
@@ -35,28 +36,8 @@ export default function F3Draft({
     visibility: "private" | "friends" | "community";
   }) => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [titleLoading, setTitleLoading] = useState(true);
   const [cover] = useState(() => COVERS[transcript.length % COVERS.length]); // 系统生成，不可选
   const [visibility, setVisibility] = useState<"private" | "friends" | "community">("private");
-
-  // 进入即发起标题建议（理理理.md §8.2）；失败/超时 → placeholder，不阻塞
-  useEffect(() => {
-    let alive = true;
-    const timeout = setTimeout(() => alive && setTitleLoading(false), 3200);
-    suggestTitle(transcript)
-      .then((t) => {
-        if (!alive) return;
-        setTitle(t);
-        setTitleLoading(false);
-      })
-      .catch(() => alive && setTitleLoading(false))
-      .finally(() => clearTimeout(timeout));
-    return () => {
-      alive = false;
-      clearTimeout(timeout);
-    };
-  }, [transcript]);
 
   return (
     <div className="frame frame-enter">
@@ -79,34 +60,22 @@ export default function F3Draft({
         </span>
       </div>
 
-      {/* 标题：系统建议，下划线可编辑 */}
+      {/* 标题由后端生成，只读展示 */}
       <div style={{ marginTop: 26, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, borderBottom: "1px solid var(--line-strong)", paddingBottom: 10 }}>
-          {titleLoading ? (
-            <div className="shimmer" style={{ height: 32, flex: 1, background: "var(--mist)" }} />
-          ) : (
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="起个名字"
-              maxLength={60}
-              aria-label="Story title"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                border: "none",
-                background: "transparent",
-                fontSize: 26,
-                fontWeight: 400,
-                lineHeight: 1.2,
-                color: "var(--ink)",
-                padding: 0,
-              }}
-            />
-          )}
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 7, flexShrink: 0 }} aria-hidden>
-            <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
-          </svg>
+        <div style={{ borderBottom: "1px solid var(--line-strong)", paddingBottom: 10 }}>
+          <span
+            style={{
+              display: "block",
+              minWidth: 0,
+              fontSize: 26,
+              fontWeight: 400,
+              lineHeight: 1.2,
+              color: "var(--ink)",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {title}
+          </span>
         </div>
         <div className="meta-italic" style={{ fontSize: 13, marginTop: 9 }}>
           {longDate(new Date())}
@@ -153,7 +122,7 @@ export default function F3Draft({
       <button
         onClick={() =>
           onKeep({
-            title: title.trim() || "无题的一天",
+            title,
             cover,
             reflection: "",
             transcript,

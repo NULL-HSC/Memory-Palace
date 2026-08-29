@@ -82,13 +82,18 @@ export default function Reflect({
 
   /** 完整的「等回信」流程:解构 → 等视频 → 回信抵达 */
   const waitForLetter = () => {
-    if (inflightRef.current === transcript) return;
+    if (inflightRef.current === transcript) {
+      console.log("[flow] Reflect prepare skipped: already in flight", { textLength: transcript.length });
+      return;
+    }
+    console.log("[flow] Reflect prepare start", { textLength: transcript.length });
     inflightRef.current = transcript;
     setPrepError(null);
     setLetterReady(false);
     prepareSandplay(transcript)
       .then(async (p) => {
         if (!aliveRef.current) return;
+        console.log("[flow] Reflect prepare success", { hasSession: Boolean(p.session), sessionId: p.session?.session_id, personaCount: p.personas.length });
         preparedRef.current = p;
         if (p.session) {
           // 真后端:等 VLM 视频;视频失败不挡路,首映页用兜底画面
@@ -106,6 +111,7 @@ export default function Reflect({
       })
       .catch((e) => {
         if (!aliveRef.current) return;
+        console.error("[flow] Reflect prepare failed", e);
         setPrepError(e instanceof Error ? e.message : String(e));
         inflightRef.current = null;
       });

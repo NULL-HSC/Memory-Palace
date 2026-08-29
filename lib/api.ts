@@ -1,5 +1,4 @@
 import type { DialogueTurn, Persona, SpeakerTurn, Story, StoryScene } from "./types";
-import { pickMockTitle } from "./mock/titles";
 
 /**
  * 前端统一 API 层。浏览器只访问同源 /api/*，Next.js 代理到 BACKEND_URL。
@@ -62,6 +61,7 @@ export interface VideoDetail {
 
 export interface SessionStatus {
   id: string;
+  title?: string | null;
   final_text: string;
   visibility: string;
   persona_status: string;
@@ -71,6 +71,7 @@ export interface SessionStatus {
 
 export interface CreateSessionResponse {
   session_id: string;
+  title?: string | null;
   video_task_id: string;
   persona_status: string;
   visibility: string;
@@ -94,10 +95,10 @@ export interface PageResult<T> {
   total_pages: number;
 }
 
-export interface ReplyRunCreated {
-  reply_run_id: string;
+export interface MessageCreatedResponse {
+  message_id: string;
+  turn_id: string;
   status: string;
-  message_id?: string;
 }
 
 export interface PreparedSandplay {
@@ -233,11 +234,15 @@ export async function transcribeAudio(audio: Blob, filename = "recording.webm"):
   return envelope.data.transcript;
 }
 
-export const createSession = (finalText: string) =>
-  requestEnvelope<CreateSessionResponse>("/sessions", {
+export async function createSession(finalText: string): Promise<CreateSessionResponse> {
+  console.log("[api] POST /api/sessions start", { textLength: finalText.length, useBackend: USE_BACKEND, hasAccessToken: Boolean(getAccessToken()) });
+  const result = await requestEnvelope<CreateSessionResponse>("/sessions", {
     method: "POST",
     body: { final_text: finalText },
   });
+  console.log("[api] POST /api/sessions success", { sessionId: result.session_id, videoTaskId: result.video_task_id, personaStatus: result.persona_status });
+  return result;
+}
 
 export const listSessions = (page = 1, limit = 20) =>
   requestEnvelope<PageResult<BackendSessionSummary>>(`/sessions?page=${page}&limit=${limit}`);
@@ -304,6 +309,7 @@ const mapPersonas = (items: BackendPersona[]): Persona[] =>
   }));
 
 export async function getSessionPersonas(sessionId: string): Promise<Persona[]> {
+  console.log("[api] GET session personas", { sessionId });
   const data = await requestEnvelope<{ items: BackendPersona[] }>(
     `/sessions/${encodeURIComponent(sessionId)}/personas`
   );
@@ -311,10 +317,11 @@ export async function getSessionPersonas(sessionId: string): Promise<Persona[]> 
 }
 
 /** 会话创建后人设是异步产物；按会话状态轻量等待，不轮询 reply-run。 */
-async function waitForPersonas(sessionId: string): Promise<Persona[]> {
+async function waitForPersonas(sessionId: string): Promise<{ personas: Persona[]; title?: string | null }> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const status = await getSessionStatus(sessionId);
     const personaStatus = status.persona_status.toLowerCase();
+    console.log("[api] session persona poll", { sessionId, attempt: attempt + 1, personaStatus });
     if (["failed", "error", "cancelled", "canceled"].includes(personaStatus)) {
       throw new ApiError("后端人设提取失败", 502);
     }
@@ -325,7 +332,7 @@ async function waitForPersonas(sessionId: string): Promise<Persona[]> {
     }
     try {
       const personas = await getSessionPersonas(sessionId);
-      if (personas.length > 0) return personas;
+      if (personas.length > 0) return { personas, title: status.title };
     } catch (error) {
       if (error instanceof ApiError && ![404, 409, 425].includes(error.status)) throw error;
     }
@@ -380,10 +387,20 @@ async function getLocalPersonas(transcript: string): Promise<{ personas: Persona
 }
 
 export async function prepareSandplay(transcript: string): Promise<PreparedSandplay> {
-  if (!USE_BACKEND) return getLocalPersonas(transcript);
+  console.log("[api] prepareSandplay", { textLength: transcript.length, useBackend: USE_BACKEND });
+  if (!USE_BACKEND) {
+    console.log("[api] prepareSandplay using local LLM; no POST /api/sessions");
+    return getLocalPersonas(transcript);
+  }
   const session = await createSession(transcript);
-  const personas = await waitForPersonas(session.session_id);
-  return { personas, session };
+  const result = await waitForPersonas(session.session_id);
+  return {
+    personas: result.personas,
+    session: {
+      ...session,
+      title: session.title?.trim() || result.title?.trim() || undefined,
+    },
+  };
 }
 
 /* ── 消息、reply-run 与 SSE ── */
@@ -394,19 +411,10 @@ export const listMessages = (sessionId: string, page = 1, limit = 50) =>
   );
 
 export const sendSessionMessage = (sessionId: string, personaId: string, content: string) =>
-  requestEnvelope<ReplyRunCreated>(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
+  requestEnvelope<MessageCreatedResponse>(`/sessions/${encodeURIComponent(sessionId)}/messages`, {
     method: "POST",
     body: { persona_id: personaId, content },
   });
-
-export const startReplyRun = (sessionId: string, personaId: string) =>
-  requestEnvelope<ReplyRunCreated>(`/sessions/${encodeURIComponent(sessionId)}/reply-runs`, {
-    method: "POST",
-    body: { persona_id: personaId },
-  });
-
-export const cancelReplyRun = (replyRunId: string) =>
-  requestEmptyEnvelope(`/reply-runs/${encodeURIComponent(replyRunId)}/cancel`, { method: "POST" });
 
 interface ParsedSseEvent {
   event: string;
@@ -441,18 +449,28 @@ const stringField = (value: unknown): string | undefined =>
  */
 async function collectReplyRun(
   sessionId: string,
-  start: () => Promise<ReplyRunCreated>
+  start?: () => Promise<MessageCreatedResponse>,
+  onStream?: (turn: SpeakerTurn, done: boolean) => void
 ): Promise<SpeakerTurn[]> {
+  console.log("[sse] opening events stream", { sessionId });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90000);
   const headers = new Headers(authHeaders());
   headers.set("Accept", "text/event-stream");
-  const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/events`, {
-    headers,
-    signal: controller.signal,
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/events`, {
+      headers,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("[sse] events stream request threw", { sessionId, error });
+    clearTimeout(timeout);
+    throw error;
+  }
   if (!response.ok) {
+    console.error("[sse] events stream failed", { sessionId, status: response.status });
     clearTimeout(timeout);
     throw await readError(response);
   }
@@ -464,13 +482,28 @@ async function collectReplyRun(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = "";
-  const byMessage = new Map<string, { speakerId: string; text: string }>();
+  const byMessage = new Map<string, { speakerId: string; text: string; breakCount: number }>();
   const finished = new Map<string, SpeakerTurn>();
+  let finishTimer: ReturnType<typeof setTimeout> | null = null;
+  let targetTurnId: string | null = null;
 
   try {
-    const run = await start();
+    const message = start ? await start() : null;
+    if (message) {
+      targetTurnId = message.turn_id;
+      console.log("[sse] message accepted", { sessionId, messageId: message.message_id, turnId: message.turn_id, status: message.status });
+    } else {
+      console.log("[sse] listening for persisted session events", { sessionId });
+    }
     while (true) {
-      const { value, done } = await reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (error) {
+        if (controller.signal.aborted) break;
+        throw error;
+      }
+      const { value, done } = chunk;
       pending += decoder.decode(value, { stream: !done });
       const blocks = pending.split(/\r?\n\r?\n/);
       pending = blocks.pop() ?? "";
@@ -484,9 +517,19 @@ async function collectReplyRun(
           ? (payload.data as Record<string, unknown>)
           : payload;
         const eventName = (stringField(payload.type) || stringField(payload.event) || parsed.event).toLowerCase();
-        const eventRunId = stringField(nested.reply_run_id) || stringField(payload.reply_run_id);
-        if (eventRunId && eventRunId !== run.reply_run_id) continue;
-
+        const eventTurnId = stringField(nested.turn_id) || stringField(payload.turn_id);
+        const senderType = stringField(nested.sender_type) || stringField(payload.sender_type);
+        console.log("[sse] event", {
+          eventId: parsed.id,
+          eventName,
+          messageId: stringField(nested.message_id),
+          turnId: stringField(nested.turn_id),
+          deltaLength: stringField(nested.delta)?.length ?? 0,
+        });
+        // The events endpoint replays persisted history on every subscription.
+        // Once a message POST returns its turn_id, only consume that turn's persona events.
+        if (targetTurnId && eventTurnId && eventTurnId !== targetTurnId) continue;
+        if (senderType && senderType !== "persona" && eventName.includes("message")) continue;
         if (eventName.includes("error") || eventName.includes("failed")) {
           throw new ApiError(
             stringField(nested.message) || stringField(payload.message) || "reply-run 执行失败",
@@ -508,20 +551,43 @@ async function collectReplyRun(
         const fullText = stringField(nested.content) || stringField(nested.text);
 
         if (messageId && (delta || fullText)) {
-          const current = byMessage.get(messageId) ?? { speakerId: speakerId || "unknown", text: "" };
+          const current = byMessage.get(messageId) ?? { speakerId: speakerId || "unknown", text: "", breakCount: 0 };
           if (speakerId) current.speakerId = speakerId;
           current.text = fullText || `${current.text}${delta || ""}`;
           byMessage.set(messageId, current);
+          const parts = current.text.split(/\n<MSG_BREAK>\n/);
+          while (current.breakCount < parts.length - 1) {
+            const completed = parts[current.breakCount];
+            if (completed) {
+              const turn = { speakerId: current.speakerId, text: completed };
+              finished.set(`${messageId}:${current.breakCount}`, turn);
+              onStream?.(turn, true);
+            }
+            current.breakCount += 1;
+          }
+          const activeText = parts[current.breakCount] ?? "";
+          onStream?.({ speakerId: current.speakerId, text: activeText }, false);
         }
 
-        if (messageId && (eventName.includes("message.completed") || eventName.includes("role.completed"))) {
+        if (messageId && eventName.includes("message.done")) {
           const current = byMessage.get(messageId);
-          if (current?.text) finished.set(messageId, { speakerId: current.speakerId, text: current.text });
+          if (current?.text) {
+            const parts = current.text.split(/\n<MSG_BREAK>\n/);
+            const finalText = parts[current.breakCount] ?? parts[parts.length - 1] ?? "";
+            const turn = { speakerId: current.speakerId, text: finalText };
+            finished.set(`${messageId}:${current.breakCount}`, turn);
+            onStream?.(turn, true);
+          }
+          if (finishTimer) clearTimeout(finishTimer);
+          finishTimer = setTimeout(() => controller.abort(), 700);
         }
 
         if (
           eventName.includes("reply_run.completed") ||
           eventName.includes("reply-run.completed") ||
+          eventName.includes("turn.completed") ||
+          eventName.includes("chat.completed") ||
+          eventName.includes("group.completed") ||
           eventName === "run.completed" ||
           eventName === "reply.completed"
         ) {
@@ -530,13 +596,18 @@ async function collectReplyRun(
               finished.set(messageIdKey, { speakerId: current.speakerId, text: current.text });
             }
           });
-          return Array.from(finished.values());
+          const turns = Array.from(finished.values());
+          console.log("[sse] event stream completed", { sessionId, turnCount: turns.length });
+          return turns;
         }
       }
       if (done) break;
     }
-    return Array.from(finished.values());
+    const turns = Array.from(finished.values());
+    console.log("[sse] events stream ended", { sessionId, turnCount: turns.length });
+    return turns;
   } finally {
+    if (finishTimer) clearTimeout(finishTimer);
     clearTimeout(timeout);
     controller.abort();
     reader.releaseLock();
@@ -551,19 +622,31 @@ export interface ChatCtx {
   sessionId?: string;
   userPersonaId?: string;
   userMessage?: string;
+  onStream?: (turn: SpeakerTurn, done: boolean) => void;
 }
 
 export type TurnMode = "opening" | "continue" | "invite" | "answer";
 
 export async function runTurn(mode: TurnMode, speakers: string[], ctx: ChatCtx): Promise<SpeakerTurn[]> {
+  console.log("[flow] runTurn", {
+    mode,
+    speakerCount: speakers.length,
+    useBackend: USE_BACKEND,
+    sessionId: ctx.sessionId,
+    userPersonaId: ctx.userPersonaId,
+    backendEligible: Boolean(USE_BACKEND && ctx.sessionId && ctx.userPersonaId),
+  });
   if (USE_BACKEND && ctx.sessionId && ctx.userPersonaId) {
-    return collectReplyRun(ctx.sessionId, () =>
+    return collectReplyRun(
+      ctx.sessionId,
       mode === "answer" && ctx.userMessage
-        ? sendSessionMessage(ctx.sessionId!, ctx.userPersonaId!, ctx.userMessage)
-        : startReplyRun(ctx.sessionId!, ctx.userPersonaId!)
+        ? () => sendSessionMessage(ctx.sessionId!, ctx.userPersonaId!, ctx.userMessage!)
+        : undefined,
+      ctx.onStream
     );
   }
 
+  console.log("[flow] runTurn using local LLM; no SSE", { mode });
   const result = await localLlm<{ turns: SpeakerTurn[] }>("/api/llm/turn", {
     transcript: ctx.transcript,
     personas: ctx.cast,
@@ -622,12 +705,6 @@ export async function getOssPlaybackUrl(objectKey?: string): Promise<string> {
   const data = (await response.json()) as { playback_url?: string };
   if (!data.playback_url) throw new Error("The OSS playback URL is missing.");
   return data.playback_url;
-}
-
-/** 新版后端没有 title 接口，标题建议继续使用稳定的本地池。 */
-export async function suggestTitle(transcript: string): Promise<string> {
-  await delay(500);
-  return pickMockTitle(transcript);
 }
 
 /** @deprecated 真后端以 session 作为故事容器，保留此函数只为兼容旧调用。 */

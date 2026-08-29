@@ -125,6 +125,7 @@ function Shell() {
 
   /* T2 收尾:F2 Done → 阶段一(旁观者陪聊,同时并行做解构/建 session)→ 选角 → 直播间 */
   const handleListened = (text: string) => {
+    console.log("[flow] handleListened", { textLength: text.length, useBackend: USE_BACKEND });
     setTranscript(text);
     setPrepared(null);
     setPending({
@@ -140,6 +141,12 @@ function Shell() {
 
   /* 阶段一结束(回信抵达、用户拆开):幕布拉开 → 首映页先看演绎视频,看完进选角 */
   const handleReflected = (result: PreparedSandplay, playbackUrl: string | null) => {
+    console.log("[flow] Reflect ready -> Premiere", {
+      hasSession: Boolean(result.session),
+      sessionId: result.session?.session_id,
+      personaCount: result.personas.length,
+      hasPlaybackUrl: Boolean(playbackUrl),
+    });
     setPrepared(result);
     setPremiereUrl(playbackUrl);
     if (result.session) {
@@ -147,6 +154,7 @@ function Shell() {
         current
           ? {
               ...current,
+              title: result.session!.title?.trim() || current.title,
               backendSessionId: result.session!.session_id,
               backendVideoTaskId: result.session!.video_task_id,
             }
@@ -236,7 +244,7 @@ function Shell() {
     if (!genTask || !genTask.ready) return;
     setPending({
       id: "pending",
-      title: "",
+      title: genTask.prepared?.session?.title?.trim() || "未命名故事",
       date: "",
       cover: "sage",
       transcript: genTask.transcript,
@@ -303,6 +311,7 @@ function Shell() {
         <Premiere playbackUrl={premiereUrl} onBack={discardPending} onDone={() => setFrame("pick")} />
       )}
       {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} prepared={prepared} onBack={discardPending} onPick={(p, all, session) => {
+        console.log("[flow] PickRole -> Sandplay", { personaId: p.id, castCount: all.length, sessionId: session?.session_id, hasSession: Boolean(session) });
         setPersona(p);
         setCastPersonas(all);
         if (session) {
@@ -314,7 +323,14 @@ function Shell() {
         }
         setFrame("sandplay");
       }} />}
-      {frame === "draft" && <F3Draft transcript={transcript} onBack={discardPending} onKeep={handleKeep} />}
+      {frame === "draft" && (
+        <F3Draft
+          transcript={transcript}
+          title={pending?.title?.trim() || "未命名故事"}
+          onBack={discardPending}
+          onKeep={handleKeep}
+        />
+      )}
       {frame === "sandplay" && (pending || activeStory) && (
         <F4Sandplay
           story={(pending ?? activeStory)!}
