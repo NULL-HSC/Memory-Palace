@@ -82,10 +82,9 @@ function StoryCard({ story, index, onOpen }: { story: CommunityStory; index: num
   return (
     <button
       onClick={onOpen}
+      className="card-frame"
       style={{
         position: "relative",
-        background: "var(--raised)",
-        border: "1.5px solid var(--ink-blue)",
         borderRadius: "var(--r-panel)",
         padding: "12px 12px 14px",
         boxShadow: "var(--lift-3)",
@@ -173,11 +172,11 @@ export default function F5Spaces({
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 16, paddingBottom: 12 }}>
           {/* 朋友角色卡 */}
           <div
+            className="card-frame"
             style={{
-              background: "var(--raised)",
               borderRadius: "var(--r-panel)",
               padding: "14px 16px",
-              boxShadow: "var(--shadow-card)",
+              boxShadow: "var(--lift-2)",
               display: "flex",
               alignItems: "center",
               gap: 14,
@@ -274,11 +273,11 @@ export default function F5Spaces({
               <button
                 key={m.id}
                 onClick={() => setFriendId(m.id)}
+                className="card-frame"
                 style={{
-                  background: "var(--raised)",
                   borderRadius: "var(--r-panel)",
                   padding: "12px 14px",
-                  boxShadow: "var(--shadow-card)",
+                  boxShadow: "var(--lift-2)",
                   display: "flex",
                   alignItems: "center",
                   gap: 12,

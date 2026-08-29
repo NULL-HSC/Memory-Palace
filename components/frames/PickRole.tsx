@@ -130,14 +130,13 @@ export default function PickRole({
               <button
                 key={p.id}
                 onClick={() => setPicked(p.id)}
+                className={selected ? "card-frame card-frame--active" : "card-frame"}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 14,
                   padding: "14px 16px",
                   borderRadius: 16,
-                  border: selected ? "1.5px solid var(--ink-blue)" : "1px solid var(--line)",
-                  background: selected ? "var(--mist)" : "var(--raised)",
                   boxShadow: selected ? "none" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "left",

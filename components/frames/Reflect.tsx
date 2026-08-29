@@ -147,8 +147,9 @@ export default function Reflect({
             </button>
           </div>
         ) : letterReady ? (
-          /* 回信抵达:一封信落在舞台上,等用户拆开 */
-          <div className="is-pop" style={{ margin: "auto 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          /* 回信抵达:整页压暗,一封信弹在遮罩之上,等用户拆开 */
+          <div style={{ position: "absolute", inset: 0, zIndex: 20, background: "var(--scrim)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="is-pop" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <button
               onClick={openLetter}
               aria-label="拆开回信"
@@ -177,6 +178,7 @@ export default function Reflect({
                 点开,幕布就拉开
               </span>
             </button>
+          </div>
           </div>
         ) : (
           /* 占位符:等待时的冥想/小游戏方向未定,先留空(gingham = 空白待填,kit §3) */

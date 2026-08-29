@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CoverArt } from "../ui";
+import { longDate } from "@/lib/mock/titles";
 
 /**
  * 首映页(2026-08-29 产品确认):拆开回信、幕布拉开之后,先完整看一遍生成的演绎视频,
@@ -11,9 +12,6 @@ import { CoverArt } from "../ui";
  * - 真后端:播放 waitForVideoPlayback 拿到的 playbackUrl,播完自动高亮 CTA
  * - 本地演示(无后端/视频失败):占位画面 + 说明,不挡流程
  */
-
-const FOLDS =
-  "repeating-linear-gradient(90deg, var(--ink-blue) 0 14px, var(--ink) 14px 22px, var(--ink-blue) 22px 40px, rgba(142,212,232,0.35) 40px 44px)";
 
 export default function Premiere({
   playbackUrl,
@@ -29,18 +27,6 @@ export default function Premiere({
   return (
     <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden" }}>
       {/* ══ 影院背景层(插画感) ══ */}
-      {/* 顶部帷幔(短幕 + 扇贝幕脚) */}
-      <div aria-hidden style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 2 }}>
-        <div style={{ height: 34, background: FOLDS, boxShadow: "0 4px 10px rgba(18,85,113,0.25)" }} />
-        <div
-          style={{
-            height: 13,
-            backgroundImage: "radial-gradient(circle at 13px 0, var(--ink-blue) 12px, transparent 13px)",
-            backgroundSize: "26px 13px",
-            backgroundRepeat: "repeat-x",
-          }}
-        />
-      </div>
       {/* 银幕上方:淡淡的花草点缀(左右各一簇,低位不抢戏) */}
       <svg aria-hidden viewBox="0 0 390 60" style={{ position: "absolute", top: 118, left: 0, width: "100%", height: 60, zIndex: 1, pointerEvents: "none" }}>
         {/* 左簇 */}
@@ -58,10 +44,16 @@ export default function Premiere({
       </svg>
       {/* 底部:剧院座位排(后排观众的椅背剪影,雾蓝低饱和) */}
       <svg aria-hidden viewBox="0 0 390 88" preserveAspectRatio="xMidYMax slice" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 88, zIndex: 1, pointerEvents: "none" }}>
-        {[30, 108, 186, 264, 342].map((x) => (
-          <g key={x}>
-            <rect x={x - 32} y={26} width="64" height="62" rx="20" fill="var(--mist)" />
-            <rect x={x - 32} y={26} width="64" height="16" rx="8" fill="rgba(47,159,200,0.18)" />
+        {[
+          { x: 22, w: 58, y: 34, h: 54 },
+          { x: 92, w: 72, y: 24, h: 64 },
+          { x: 172, w: 60, y: 40, h: 48 },
+          { x: 246, w: 70, y: 28, h: 60 },
+          { x: 324, w: 56, y: 36, h: 52 },
+        ].map((seat, i) => (
+          <g key={i}>
+            <rect x={seat.x} y={seat.y} width={seat.w} height={seat.h} rx="18" fill="var(--mist)" />
+            <rect x={seat.x} y={seat.y} width={seat.w} height="14" rx="7" fill="rgba(47,159,200,0.18)" />
           </g>
         ))}
       </svg>
@@ -96,17 +88,33 @@ export default function Premiere({
           先静静看一遍,你的故事被演出来了。
         </span>
 
-        {/* 银幕:墨蓝边框 + 投影,视频居中即播 */}
+        {/* 放映卡:米白大拍立得(和首页同款裱框 + 内阴影),左上角贴胶带 */}
         <div
+          className="card-frame"
           style={{
-            marginTop: 20,
-            background: "linear-gradient(180deg, #2185AC 0%, var(--ink-blue) 78%)",
+            position: "relative",
+            marginTop: 46,
             borderRadius: "var(--r-panel)",
-            padding: 10,
-            boxShadow: "var(--lift-3), inset 0 2px 0 rgba(255,249,238,0.28)",
+            padding: "12px 12px 0",
+            boxShadow: "var(--lift-3)",
             flexShrink: 0,
           }}
         >
+          {/* washi 胶带(一张,斜贴左上角) */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -10,
+              left: 18,
+              width: 62,
+              height: 22,
+              background: "rgba(255,216,106,0.85)",
+              boxShadow: "0 1px 3px rgba(15,45,66,0.14)",
+              transform: "rotate(-8deg)",
+              zIndex: 2,
+            }}
+          />
           <div
             style={{
               position: "relative",
@@ -165,9 +173,59 @@ export default function Premiere({
                 </div>
               </>
             )}
+            {/* 内框内阴影:压在画面上,衬出嵌框感(同首页拍立得) */}
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "var(--r-photo)",
+                boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)",
+                pointerEvents: "none",
+              }}
+            />
+            {/* 进度条(装饰,真视频接入后联动) */}
+            <div
+              style={{
+                position: "absolute",
+                left: 10,
+                right: 10,
+                bottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--story)", flexShrink: 0 }} />
+              <span style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--story)", opacity: 0.55 }} />
+              <span style={{ fontSize: 11, color: "var(--story)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+              </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+            </div>
           </div>
-          <div className="meta-italic" style={{ fontSize: 12, marginTop: 8, textAlign: "center", color: "var(--text-on-ink)" }}>
-            {playbackUrl ? (ended ? "看完了" : "放映中…") : "视频接口接好后自动换成真放映"}
+          {/* 底 mat:格纹 + 手写标题 + 黄油日期 */}
+          <div
+            style={{
+              margin: "12px -12px 0",
+              padding: "12px 12px 13px",
+              borderRadius: "0 0 var(--r-panel) var(--r-panel)",
+              textAlign: "center",
+              backgroundColor: "var(--cream)",
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px), repeating-linear-gradient(90deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px)",
+            }}
+          >
+            <div style={{ fontFamily: "var(--font-hand)", fontSize: 21, fontWeight: 600, color: "var(--ink-blue)" }}>
+              {playbackUrl ? (ended ? "看完了" : "今天的故事") : "今天的故事"}
+            </div>
+            <div style={{ fontFamily: "var(--font-hand)", fontSize: 12.5, marginTop: 3, color: "var(--butter)", textShadow: "0 1px 2px rgba(15,45,66,0.15)" }}>
+              {longDate(new Date())}
+            </div>
           </div>
         </div>
 
