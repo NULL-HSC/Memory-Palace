@@ -6,6 +6,7 @@ import { runTurn, type TurnMode } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
 import { TypeText } from "../ui";
 import SandplayStage from "../scene/SandplayStage";
+import ChatInput from "../ui/ChatInput";
 
 /**
  * F4 — The sandplay · 板块二（直播间形态,全真实 LLM,无 mock）
@@ -387,46 +388,14 @@ export default function F4Sandplay({
                 <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5" />
               </svg>
             </button>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
-              aria-label="输入消息"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                height: 46,
-                border: "none",
-                borderRadius: 23,
-                background: "var(--cream)",
-                boxShadow: "var(--lift-1)",
-                padding: "0 18px",
-                fontSize: 15,
-                fontWeight: 500,
-                color: "var(--ink)",
-              }}
-            />
-            <button
-              onClick={send}
-              aria-label="发送"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 46,
-                height: 46,
-                borderRadius: "50%",
-                background: "var(--butter)",
-                boxShadow: "0 3px 0 var(--butter-under)",
-                flexShrink: 0,
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M22 2L11 13" />
-                <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-              </svg>
-            </button>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <ChatInput
+                value={input}
+                onChange={setInput}
+                onSend={send}
+                placeholder={persona ? `以${persona.name}的身份说…` : "写点什么…"}
+              />
+            </div>
           </div>
           {/* mic 占位提示 */}
           {micNote && (
