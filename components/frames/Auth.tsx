@@ -27,7 +27,7 @@ function validate(mode: Mode, f: Record<FieldKey, string>): Partial<Record<Field
     const username = f.username.trim();
     if (username.length < 1 || username.length > 64)
       errors.username = "名字要在 1–64 个字之间";
-    if (!CODE_RE.test(f.code.trim())) errors.code = "The code is 6 digits";
+    if (!CODE_RE.test(f.code.trim())) errors.code = "验证码是 6 位数字";
   }
   return errors;
 }
@@ -122,10 +122,10 @@ export default function Auth({
         setErrors((prev) => ({ ...prev, code: undefined }));
         setCodeHint(`demo 验证码 ${result.verification_code},已帮你填好`);
       } else {
-        setCodeHint(`code sent · expires in ${Math.round(result.expires_in_seconds / 60)} min`);
+        setCodeHint(`验证码已发出,${Math.round(result.expires_in_seconds / 60)} 分钟内有效`);
       }
     } catch (error) {
-      setFormError(backendMessage(error, "Could not send the code"));
+      setFormError(backendMessage(error, "验证码没发出去,再试试"));
     } finally {
       setSendingCode(false);
     }
@@ -149,7 +149,7 @@ export default function Auth({
             });
       onAuthed(auth.user.username);
     } catch (error) {
-      setFormError(backendMessage(error, "Something went wrong — please try again"));
+      setFormError(backendMessage(error, "出了点问题,再试一次"));
     } finally {
       setBusy(false);
     }
@@ -157,41 +157,68 @@ export default function Auth({
 
   return (
     <div className="frame frame-enter" style={{ overflow: "hidden" }}>
-      {/* header:品牌布标签 + companion */}
+      {/* header:ribbon 品牌标题牌(缺口右端,kit §4 chrome)+ companion */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0 }}>
         <div>
-          <span
-            style={{
-              display: "inline-block",
-              background: "var(--story)",
-              color: "var(--text-on-ink)",
-              fontSize: 17,
-              fontWeight: 500,
-              padding: "5px 16px 6px",
-              borderRadius: 9,
-              transform: "rotate(-2deg)",
-              boxShadow: "var(--lift-2)",
-            }}
-          >
+          <span className="ribbon" style={{ transform: "rotate(-1.5deg)" }}>
             理理理 lilili
           </span>
           <div className="meta-italic" style={{ marginTop: 10 }}>
-            every story gets a room
+            每个故事都有一个房间
           </div>
         </div>
         <Companion size={72} className="anim-bob" />
       </div>
 
-      {/* 表单 */}
-      <div style={{ marginTop: 34, flexShrink: 0 }}>
-        <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>
-          {mode === "login" ? "欢迎回来" : "布置你的房间"}
-        </div>
-        <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
-          {mode === "login" ? "登录,把故事放在身边" : "一个手机号就够了"}
-        </div>
+      {/* 表单:一封信纸卡(登录 = 在信纸上落笔),左上角一条和纸胶带,顶边露一圈信衬 gingham */}
+      <div style={{ marginTop: 28, flexShrink: 0 }}>
+        <div
+          style={{
+            position: "relative",
+            background: "var(--raised)",
+            borderRadius: "var(--r-panel)",
+            boxShadow: "var(--lift-2)",
+            padding: "26px 18px 18px",
+            transform: "rotate(-0.6deg)",
+          }}
+        >
+          {/* 和纸胶带:每屏一条额度用在这,斜 -7° 贴角 */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -10,
+              left: 22,
+              width: 62,
+              height: 22,
+              background: "rgba(255,216,106,0.85)",
+              boxShadow: "0 1px 3px rgba(15,45,66,0.14)",
+              transform: "rotate(-7deg)",
+            }}
+          />
+          {/* 信衬窄带:gingham strip 尺度(7px),只在信纸顶边露一圈 */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 10,
+              borderRadius: "var(--r-panel) var(--r-panel) 0 0",
+              backgroundColor: "var(--cream)",
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(47,159,200,0.26) 0 7px, transparent 7px 14px), repeating-linear-gradient(90deg, rgba(47,159,200,0.26) 0 7px, transparent 7px 14px)",
+            }}
+          />
+          <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>
+            {mode === "login" ? "欢迎回来" : "布置你的房间"}
+          </div>
+          <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
+            {mode === "login" ? "登录,把故事放在身边" : "一个手机号就够了"}
+          </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 20 }}>
           <Field label="手机号" error={errors.phone}>
             <input
               value={fields.phone}
@@ -199,7 +226,7 @@ export default function Auth({
               placeholder="138 0000 0000"
               inputMode="tel"
               autoComplete="tel"
-              aria-label="Phone number"
+              aria-label="手机号"
               style={inputStyle}
             />
           </Field>
@@ -214,7 +241,7 @@ export default function Auth({
                   inputMode="numeric"
                   maxLength={6}
                   autoComplete="one-time-code"
-                  aria-label="Verification code"
+                  aria-label="验证码"
                   style={inputStyle}
                 />
                 <button
@@ -245,7 +272,7 @@ export default function Auth({
                   placeholder="你的名字"
                   maxLength={64}
                   autoComplete="nickname"
-                  aria-label="Username"
+                  aria-label="昵称"
                   style={inputStyle}
                 />
               </Field>
@@ -260,18 +287,19 @@ export default function Auth({
               type="password"
               maxLength={128}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              aria-label="Password"
+              aria-label="密码"
               style={inputStyle}
             />
           </Field>
         </div>
 
-        {/* 后端错误:统一信封的 message 原样展示 */}
-        {formError && (
-          <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", marginTop: 12 }}>
-            {formError}
-          </div>
-        )}
+          {/* 后端错误:统一信封的 message 原样展示 */}
+          {formError && (
+            <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", marginTop: 12 }}>
+              {formError}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0 }} />
