@@ -9,7 +9,14 @@
    ============================================================ */
 
 :root {
-  /* ---- The seven. Do not add to this list. ---- */
+  /* ---- The seven. Do not add to this list. ----
+     The identity reads as a PRIMARY TRIAD: a deep blue, a light blue, and a
+     warm off-white. Everything else is support.
+       deep blue  = --ink-blue (with --ink for small text)
+       light blue = --sky / --mist  (Clear Sky is the saturated one, Mist the pale)
+       off-white  = --cream
+     Butter is the single "press me" colour; Coral is a spot mark. If a screen
+     reads as anything other than cream-with-blue, it is off-system. */
   --cream:   #FFF9EE;   /* Cream Paper  · 45% of any screen */
   --mist:    #D9EEF4;   /* Mist Blue    · 20% */
   --sky:     #8ED4E8;   /* Clear Sky    · 15% */
@@ -22,6 +29,15 @@
   --ink:          #125571;  /* Deep Ink. ALL small text. 7.82:1 on cream */
   --butter-under: #E9B84A;  /* underside of a butter control */
   --sky-under:    var(--story);   /* underside of a sky control */
+
+  /* ---- Gingham. The signature surface pattern — see guideline §3.
+     Story Blue woven on cream. Two scales only: the field scale for large
+     areas, the strip scale for tape and narrow bands. Do not invent a third,
+     and do not change the alpha — at .26 the weave stays under the text
+     contrast floor for the labels that sit beside it. ---- */
+  --gingham-line:  rgba(47, 159, 200, .26);  /* = --story at 26% */
+  --gingham-field: 13px;   /* half-period on photo fields, card grounds, linings */
+  --gingham-strip: 7px;    /* half-period on tape and narrow bands */
 
   /* ---- Text roles ---- */
   --text:          var(--ink);       /* body, labels, anything under 19px */

@@ -8,6 +8,20 @@ constraint, not advice.
 — seven values, reproduced exactly in `tokens.css`. One structural shade is added on top
 of them (`--ink`, see §4); nothing else may be.
 
+**Revised 2026-08-29** against a new five-screen mock set. The palette did not
+change — the swatch sheet in that set matches `tokens.css` value for value. What
+changed is how the materials are used:
+
+- **Gingham is promoted.** It was described here as an empty-state fill; it is
+  actually the signature surface of the product and recurs on nearly every
+  screen. See §3.1 — the old rule is withdrawn.
+- The identity is stated as a **primary triad** (deep blue / light blue / cream)
+  in §2.1, so the seven-value table is read as roles rather than a flat list.
+- New materials and components: letter paper, envelope, video player, named
+  speaker rows, character-picker grid, ribbon-as-back. §3, §5, §6.5–6.7.
+- One thing in the new mock must **not** ship as drawn — the speaker names are
+  lettered in a blue that fails contrast on cream. §12.10.
+
 If you find yourself typing a hex literal outside `tokens.css`, stop. Every colour
 decision belongs in that file.
 
@@ -58,6 +72,13 @@ brings a bad afternoon. It must never feel loud, clinical, or gamified into a ch
 ## 2. Foundations
 
 ### 2.1 Colour
+
+The identity is a **primary triad — a deep blue, a light blue, and a warm off-white.**
+Read a finished screen and it should resolve to those three; everything else is
+support. Deep blue is `--ink-blue` (with `--ink` for small text), light blue is
+`--sky` and its paler sibling `--mist`, and the off-white is `--cream`. Butter
+Yellow is the single "press me" colour, and Coral is a spot mark — neither is
+part of the identity, and a screen that leads with either is off-system.
 
 The seven signed-off colours, with the share of screen each should occupy. The ratio is
 a real constraint, not a description: **a screen that is mostly Clear Sky is off-system.**
@@ -138,13 +159,41 @@ These are the vocabulary. Use them; do not invent new ones.
 
 | Material | What it is | Rules |
 |---|---|---|
-| **Gingham** `.gingham` | Blue check weave | Means *blank, awaiting content*. Use on the empty story slot. Never behind text. |
-| **Washi tape** `.tape` | Translucent butter strip | Max **one per screen**. Always rotated 5–10°. Always on a corner. |
+| **Gingham** `.gingham` | Blue check weave on cream | **The signature surface of the product** — see §3.1. Use it widely. Never behind running text. |
+| **Washi tape** `.tape` / `.tape--gingham` | Translucent butter strip, or the gingham weave | Max **one per screen**. Always rotated 5–10°. Always on a corner. |
 | **Binder clip + string** | Blue clip, 2px string to the top edge | Used in **pairs**. Anything clipped MUST also carry `.is-sway`. |
 | **Cloud band** | Scalloped `--mist` shape at the top | The shelf things hang from. One per screen, top only. |
 | **Wave** | Scalloped edge above the tab bar | Mirrors the cloud band. Tab bar only. |
+| **Letter paper** `.letter` | Cream stock ruled in `--mist` | The "tell me about it" surface. `line-height` MUST equal the rule period. |
+| **Envelope** `.envelope` | Cream body, gingham flap lining | Closes a letter. The lining is where gingham belongs, not the body. |
 | **Paper grain** `.grain` | Noise overlay | On `.screen`, always, always `pointer-events: none`. |
 | **Sparkle ticks** | 2–3 short blue strokes | Marks something interactive or new. Max 2 clusters per screen. |
+
+### 3.1 Gingham — the signature surface
+
+This is the pattern people will recognise the product by, and the previous
+revision of this guideline got it wrong: it called gingham an empty-state fill
+and told you to keep it on the empty story slot. **That rule is withdrawn.**
+Gingham is a material you reach for often, not a placeholder.
+
+Woven from `--story` at 26% on `--cream`, at one of two scales — the tokens are
+`--gingham-field` (13px, large areas) and `--gingham-strip` (7px, narrow bands).
+Below roughly 40px the field scale reads as coarse mush; step down to the strip
+scale rather than shrinking the field one.
+
+**Use it for:** the photo field of a polaroid (empty *or* holding a character);
+the ground behind a featured character; the inside of an envelope flap; tape;
+decorative edge bands; the field behind a swatch or a card.
+
+**Never:**
+- Behind running text. The weave and 15px body text fight, and the contrast
+  figure stops being meaningful once the ground alternates.
+- At more than one scale in the same element.
+- Recoloured. It is blue-on-cream. A butter or coral gingham is a different
+  product.
+- As the whole screen ground. Cream still has to dominate (§2.1) — gingham is
+  a field *inside* the layout, and a screen tiled edge to edge in it breaks
+  the ratio.
 
 ---
 
@@ -221,8 +270,14 @@ All defined in `components.css`. Class names are the contract.
 | `.ribbon` | screen title | Notched right end. Never a plain rectangle. |
 | `.tabbar` / `.tab` | *(new)* | Three tabs: Stories, Discover, Me. Wave sits above as a sibling SVG. |
 | `.bubble` / `.bubble--mine` | chat bubble | Own message is `--sky` with `--ink` text. |
+| `.bubble--action` | *(new)* | Butter bubble offering an action ("Play it again?"). Never for speech. |
+| `.speaker` / `.speaker__name` | *(new)* | Named speaker row. The name is REQUIRED in group scenes. `--ink-blue`, never `--story`. |
 | `.ip-chip` | speaker avatar | 40px, `object-position: 50% 20%` to crop to the face. |
-| `.gingham` | dashed empty slot | The new empty-state fill. |
+| `.gingham` / `--strip` / `--field` | dashed empty slot | Now the signature surface, not an empty state — see §3.1. |
+| `.letter` / `.envelope` | *(new)* | Ruled writing surface and its envelope. |
+| `.player` | *(new)* | The reenactment video: Clear Sky frame, Mist screen, Ink Blue controls. |
+| `.picker` | *(new)* | Character-selection grid. Selection is a butter ring, never a colour swap. |
+| `.ribbon--back` | *(new)* | The ribbon doubling as the back control on inner screens. |
 
 **A row of `.polaroid` at the same `top` produces one continuous cream band across the
 screen** — their bottom mats line up. Stagger their vertical positions by ≥20px, or use
@@ -262,17 +317,43 @@ No cover picker. No regenerate button. The date is not editable.
 - Title on an editable line with a pencil affordance, hand font, `--ink-blue`.
 - Transcript recap in a `--mist` well.
 
-### 6.4 Sandplay
+### 6.4 Sandplay / Story room
 
-- Tray: `--mist` well with an inset shadow, rounded `--r-panel`, sand-coloured.
-  Character stickers stand in it.
+- The reenactment video sits at the top in a `.player` — Clear Sky frame, Mist screen.
+  While it generates, the screen holds the frame and shows a waiting state inside it;
+  do not collapse the frame and reflow the page when the video arrives.
 - Below it, a **group chat**: several characters, one voice each, arguing different
   perspectives on the same event. Not a list of options.
+- Every speaker carries `.ip-chip` **and** `.speaker__name`. With three characters
+  talking, a 40px sticker alone does not identify who is speaking.
+- A `.bubble--action` may offer to replay the scene. One at a time, and never
+  mixed into the middle of the transcript — it belongs at the current end.
 - One character may show a typing indicator while others have spoken — the transport
   must support per-character streaming and out-of-order arrival.
-- Mic-first input bar.
+- Mic-first input bar: `--sky` mic disc, cream input field, butter send.
 
-### 6.5 Other Spaces
+### 6.5 Write a letter
+
+A letter to a future self — the slow, written counterpart to Speak It.
+- Title in the hand font, centred. **If the title is CJK, set it in the UI font at
+  700 instead** (§2.2) — the hand font has no CJK coverage and will fall back
+  mid-heading.
+- Body on `.letter`. The `line-height` must equal the rule period or the text
+  drifts off the lines as it wraps.
+- The salutation ("Dear future me,") uses `.letter__open` — Latin only, same reason.
+- An `.envelope` closes the composition, gingham inside the flap.
+- Two ways out, and they are not equal: a `--sky` mic disc to dictate, and the
+  butter `.btn` to send. Sending is the primary action; dictating is an input mode.
+
+### 6.6 Choose a friend
+
+- The current companion sits large on a `.gingham--field`, name beneath in the
+  hand font, with a check badge marking it as current.
+- `.picker` grid below, 4 across. Selection is a butter ring plus a check —
+  never a background colour swap, which would fight the character art.
+- Primary `.btn` commits the choice. Nothing changes until it is pressed.
+
+### 6.7 Other Spaces
 
 Two-column grid of `.polaroid--sm`, each holding a character sticker on a tinted field,
 with a name and story count beneath. Field tint alternates `--mist` / `--sky`, assigned
@@ -374,9 +455,20 @@ Do not treat these as decided. Ask before building on them.
    small text (§4). Confirm `#125571`, or supply your own darker step of Ink Blue.
 2. **The hand-lettered face.** Shantell Sans is a stand-in.
 3. **Tab bar contents.** Three tabs are in the mock; only "Stories" has screens.
-4. **"Discover" and "Me".** No designs exist.
+4. **"Discover" and "Me".** Still no designs.
 5. **Story cover art.** Placeholder.
 6. **Whether the level system survives** the redesign, and what it measures.
+   The 2026-08-29 mocks show no Lv chip anywhere — that may be an answer, or an
+   omission. Confirm before deleting the component.
 7. **Empty state.** Still undesigned, and now the most important gap — the art
    direction mock is arguably an empty state, but the zero-story case is unconfirmed.
 8. **Story detail view.** Tapping a polaroid still has no destination.
+9. **Where "Write a letter" (§6.5) lives.** It arrived as a screen with no
+   route: it is not the Speak It flow, and no tab or button in any mock opens
+   it. Needs a home in the IA before it can be built.
+10. **Speaker-name colour in the Story room mock.** Drawn in a light blue that
+    measures ≈2.9:1 on cream. `components.css` sets `--ink-blue` instead. If the
+    intent was genuinely the lighter blue, the palette needs a new value — it
+    cannot ship as drawn.
+11. **Whether the video frame stays Clear Sky.** It is the largest saturated
+    blue field in the system and sits right at the §2.1 ratio ceiling.

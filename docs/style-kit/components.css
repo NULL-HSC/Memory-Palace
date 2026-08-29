@@ -30,12 +30,32 @@ a { text-decoration: none; color: inherit; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
 }
 
-/* Gingham. The signature fill for anything "blank" or awaiting content. */
+/* ---- Gingham. THE signature surface of this product. ----
+   Not an empty-state fill: it is the check weave that recurs across every
+   screen — photo fields, card grounds, envelope linings, tape, decorative
+   bands. Blue on cream, always. See guideline §3 for where it may and may
+   not go (short version: never under running text). */
 .gingham {
   background-color: var(--cream);
   background-image:
-    repeating-linear-gradient(0deg,  rgba(47,159,200,.26) 0 13px, transparent 13px 26px),
-    repeating-linear-gradient(90deg, rgba(47,159,200,.26) 0 13px, transparent 13px 26px);
+    repeating-linear-gradient(0deg,  var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2)),
+    repeating-linear-gradient(90deg, var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2));
+}
+/* Narrow bands: tape, edge trim, the strips down the side of a swatch card.
+   The field scale looks coarse below ~40px, so step the weave down instead. */
+.gingham--strip {
+  background-image:
+    repeating-linear-gradient(0deg,  var(--gingham-line) 0 var(--gingham-strip), transparent var(--gingham-strip) calc(var(--gingham-strip) * 2)),
+    repeating-linear-gradient(90deg, var(--gingham-line) 0 var(--gingham-strip), transparent var(--gingham-strip) calc(var(--gingham-strip) * 2));
+}
+/* Gingham carrying a character sticker or an icon — the "field" behind a
+   subject, as on the character picker and the polaroid photo area. */
+.gingham--field {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--r-photo);
 }
 
 /* ---- 2. Puffy controls ------------------------------------ */
@@ -124,13 +144,20 @@ a { text-decoration: none; color: inherit; }
   color: var(--text-large);
 }
 
-/* Washi tape. Decorative, one per screen at most, always askew. */
+/* Washi tape. Decorative, always askew. Two faces: plain butter, or the
+   gingham weave. Counts as one tape either way — see guideline §3. */
 .tape {
   position: absolute;
   width: 62px;
   height: 22px;
   background: rgba(255, 216, 106, .85);
   box-shadow: 0 1px 3px rgba(23, 106, 145, .14);
+}
+.tape--gingham {
+  background-color: rgba(255, 249, 238, .92);
+  background-image:
+    repeating-linear-gradient(0deg,  var(--gingham-line) 0 var(--gingham-strip), transparent var(--gingham-strip) calc(var(--gingham-strip) * 2)),
+    repeating-linear-gradient(90deg, var(--gingham-line) 0 var(--gingham-strip), transparent var(--gingham-strip) calc(var(--gingham-strip) * 2));
 }
 
 /* Binder clip + string. Use in pairs. The string runs to the top edge. */
@@ -149,6 +176,20 @@ a { text-decoration: none; color: inherit; }
   font-family: var(--font-hand);
   font-size: var(--t-title);
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+}
+/* The same ribbon acting as the back affordance on an inner screen: a chevron
+   sits inside the tag and the whole tag is the target. Keep it a real
+   <button>, and keep the 44px floor — the ribbon is only 42px tall, so the
+   padding here is what earns the touch target, not decoration. */
+.ribbon--back {
+  gap: var(--s-2);
+  padding-block: var(--s-1);
+  min-height: 44px;
+  border: 0;
+  font-size: var(--t-body);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* Tab bar. Sits on a wave; the wave is an SVG sibling, not a border. */
@@ -180,6 +221,130 @@ a { text-decoration: none; color: inherit; }
   color: var(--ink-blue);
 }
 
+/* ---- 4b. Writing surfaces --------------------------------- */
+
+/* Ruled letter paper. The "tell me about it" surface: cream stock with
+   Mist ruling. The rule colour is deliberately weak — it must sit UNDER
+   the text without competing, so it is never used to separate sections. */
+.letter {
+  position: relative;
+  padding: var(--s-5);
+  border-radius: var(--r-panel);
+  background-color: var(--cream);
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0 33px,
+    var(--mist) 33px 34px
+  );
+  background-position: 0 var(--s-5);
+  box-shadow: var(--lift-2);
+  line-height: 34px;   /* MUST match the rule period, or text drifts off the lines */
+}
+/* The salutation / first line, in the hand font. Latin only — see §2.2. */
+.letter__open {
+  font-family: var(--font-hand);
+  font-size: var(--t-title);
+  color: var(--text-large);
+}
+
+/* Envelope. Closes a letter; the inside of the flap is gingham. */
+.envelope {
+  position: relative;
+  border-radius: var(--r-panel);
+  background: var(--cream);
+  box-shadow: var(--lift-2);
+  overflow: hidden;
+}
+.envelope__flap {
+  height: 76px;
+  background-color: var(--cream);
+  background-image:
+    repeating-linear-gradient(0deg,  var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2)),
+    repeating-linear-gradient(90deg, var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* ---- 4c. Player ------------------------------------------- */
+
+/* The reenactment video. A Clear Sky frame around a Mist screen — the video
+   is the one place a large saturated blue field is correct. Controls are
+   Ink Blue on that field; never cream (1.57:1, see §4). */
+.player {
+  padding: 10px;
+  border-radius: var(--r-panel);
+  background: var(--sky);
+  box-shadow: var(--lift-2);
+}
+.player__screen {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--r-chip);
+  background: var(--mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.player__screen > video,
+.player__screen > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Play affordance: a disc, same physics as every other pressable thing. */
+.player__play {
+  width: 64px; height: 64px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cream);
+  box-shadow: 0 4px 0 var(--mist), var(--lift-1);
+  color: var(--ink-blue);
+  cursor: pointer;
+}
+.player__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-1) 0;
+  color: var(--text-on-sky);      /* Deep Ink on Clear Sky = 4.97:1 */
+  font-size: var(--t-micro);
+  font-weight: 600;
+}
+.player__track {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: rgba(18, 85, 113, .25);
+}
+.player__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--ink-blue);
+}
+
+/* ---- 4d. Character picker --------------------------------- */
+
+/* Grid of selectable companions. The chosen one gets a butter ring and a
+   check — never a colour swap, so the art stays readable. */
+.picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-3);
+}
+.picker__cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--s-1);
+  border: 0;
+  border-radius: var(--r-chip);
+  background: var(--cream);
+  box-shadow: var(--lift-1);
+  cursor: pointer;
+}
+.picker__cell[aria-pressed="true"] {
+  box-shadow: 0 0 0 3px var(--butter), var(--lift-1);
+}
+.picker__cell > img { width: 100%; height: 100%; object-fit: contain; }
+
 /* ---- 5. Chat ---------------------------------------------- */
 
 .bubble {
@@ -198,12 +363,42 @@ a { text-decoration: none; color: inherit; }
   box-shadow: none;
 }
 
+/* A bubble that offers an action rather than saying something ("Play it
+   again?"). Butter, so it reads as pressable — never use it for speech. */
+.bubble--action {
+  background: var(--butter);
+  color: var(--text-on-butter);
+  box-shadow: var(--press-butter);
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* An IP sticker used as a speaker chip. Keyline already in the PNG. */
 .ip-chip {
   width: 40px; height: 40px;
   object-fit: contain;
   object-position: 50% 20%;
   flex-shrink: 0;
+}
+
+/* A named speaker: sticker chip + name label + bubble. In a group scene the
+   name is REQUIRED — several characters speak and the sticker alone is not
+   enough to tell them apart at 40px. */
+.speaker {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+.speaker__body { min-width: 0; }
+.speaker__name {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  /* Ink Blue, NOT Story Blue. Story Blue on cream is 2.90:1 and cannot carry
+     text at any size — see §4. The mock letters these names in a lighter
+     blue; that is the one thing on these screens which must not ship as drawn. */
+  color: var(--ink-blue);
 }
 
 /* ---- 6. Motion -------------------------------------------- */
