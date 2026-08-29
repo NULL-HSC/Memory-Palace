@@ -13,7 +13,6 @@ import Reflect from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
 import Profile from "@/components/frames/Profile";
 import StoryDetail from "@/components/frames/StoryDetail";
-import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
 import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/community";
 import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
@@ -24,11 +23,10 @@ import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updat
  *        → F4 Sandplay 阶段二(草稿先行)→ F3 Keep 页 → 入长廊回 Home;F1 ↔ F5
  * 阶段一同时并行做解构(建 session / 触发视频任务 / 提取人设),结果经 handleReflected
  * 传给 PickRole —— 不要在 PickRole 里再请求一次,那会另起一个视频任务。
- * T1: companion 从角落跳到画面中央
+ * Home → Listening 为直接跳帧(2026-08-29:移除 T1 小人飞行过场,产品确认纯跳转)
  */
 
 type Frame = "auth" | "home" | "listening" | "reflect" | "pick" | "draft" | "sandplay" | "spaces" | "profile" | "storyDetail";
-type Overlay = "t1" | null;
 
 /** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
 const DEMO_SKIP_KEY = "lilili.demo.skip";
@@ -36,8 +34,6 @@ const DEMO_SKIP_KEY = "lilili.demo.skip";
 function Shell() {
   const { stories, addStory } = useStore();
   const [frame, setFrame] = useState<Frame | null>(null); // null = 启动中(等待 token 探测)
-  const [overlay, setOverlay] = useState<Overlay>(null);
-  const [overlayGo, setOverlayGo] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [pending, setPending] = useState<Story | null>(null); // 未 Keep 的草稿故事
@@ -47,21 +43,6 @@ function Shell() {
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
   /** storyDetail 的数据来源:自己的历史(store)/ 社区故事(mock) */
   const [detailSource, setDetailSource] = useState<"mine" | "community">("mine");
-
-  /* 转场两段式：挂载后触发位移，结束后切帧（目前仅 T1 使用） */
-  useEffect(() => {
-    if (!overlay) return;
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOverlayGo(true)));
-    const t = setTimeout(() => {
-      if (overlay === "t1") setFrame("listening");
-      setOverlay(null);
-      setOverlayGo(false);
-    }, 520);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(t);
-    };
-  }, [overlay]);
 
   /* 启动:无 token → auth 帧;已登录 → home。
      调试/演示捷径 ?frame=listening|pick|draft|sandplay|spaces 优先于登录态,直达任意帧 */
@@ -92,13 +73,12 @@ function Shell() {
     handleAuthed();
   };
 
-  /* T1 · Home → Listening：点 companion / "+" */
+  /* Home → Listening：点 Create,直接跳帧(无过场) */
   const startNewStory = () => {
     setPersona(null);
     setCastPersonas(null);
     setPrepared(null);
-    setOverlay("t1");
-    setOverlayGo(false);
+    setFrame("listening");
   };
 
   /* T2 收尾:F2 Done → 阶段一(旁观者陪聊,同时并行做解构/建 session)→ 选角 → 直播间 */
@@ -287,23 +267,6 @@ function Shell() {
             />
           )
         ))}
-
-      {/* T1 overlay：companion 跳到画面中央 */}
-      {overlay === "t1" && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 50, pointerEvents: "none", background: "var(--bg-cream)" }}>
-          <div
-            style={{
-              position: "absolute",
-              left: overlayGo ? "50%" : "calc(100% - 120px)",
-              top: overlayGo ? "40%" : "calc(100% - 132px)",
-              transform: overlayGo ? "translate(-50%, -50%) scale(1.18)" : "translate(0, 0) scale(1)",
-              transition: "left 460ms var(--ease-soft), top 460ms var(--ease-soft), transform 460ms var(--ease-soft)",
-            }}
-          >
-            <Companion size={96} />
-          </div>
-        </div>
-      )}
 
     </div>
   );
