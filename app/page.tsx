@@ -327,6 +327,7 @@ function Shell() {
                 title={cs.title}
                 date={cs.date}
                 cover={cs.cover}
+                video={cs.video}
                 transcript={cs.transcript}
                 ownerName={owner.name}
                 initialComments={cs.comments}
@@ -342,6 +343,7 @@ function Shell() {
               title={activeStory.title}
               date={activeStory.date}
               cover={activeStory.cover}
+              video={activeStory.video}
               transcript={activeStory.transcript}
               reflection={activeStory.reflection}
               visibility={activeStory.visibility}
