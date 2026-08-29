@@ -29,6 +29,9 @@
   --ink:          #125571;  /* Deep Ink. ALL small text. 7.82:1 on cream */
   --butter-under: #E9B84A;  /* underside of a butter control */
   --sky-under:    var(--story);   /* underside of a sky control */
+  --floor:        #F1E5CB;  /* floor: one step darker and warmer than cream.
+                     Product-approved 2026-08-29. Only for the ground strip at
+                     the bottom of a screen — walls stay cream. */
 
   /* ---- Gingham. The signature surface pattern — see guideline §3.
      Story Blue woven on cream. Two scales only: the field scale for large
@@ -62,17 +65,20 @@
   --r-chip:  16px;
   --r-photo: 6px;   /* the one near-square: a printed photo in a frame */
 
-  /* ---- Elevation. Shadows are Ink Blue, never grey or black. ---- */
-  --lift-1: 0 3px 10px rgba(23, 106, 145, 0.12);
-  --lift-2: 0 8px 20px rgba(23, 106, 145, 0.16);
-  --lift-3: 0 16px 34px rgba(23, 106, 145, 0.20);
+  /* ---- Elevation. 2026-08-29 product calibration: shadows moved from
+     saturated Ink Blue to a near-black navy at LOW alpha with TIGHT blur —
+     reads as a natural drop shadow, not a blue glow. Structural, not a brand
+     colour. Still never grey. ---- */
+  --lift-1: 0 2px 5px rgba(15, 45, 66, 0.07);
+  --lift-2: 0 4px 9px rgba(15, 45, 66, 0.08);
+  --lift-3: 0 8px 16px rgba(15, 45, 66, 0.10);
   /* Pressable things get a hard underside instead of a blur. */
   --press-butter: 0 4px 0 var(--butter-under);
   --press-sky:    0 4px 0 var(--sky-under);
 
   /* ---- Type ---- */
-  --font-hand: "Shantell Sans", "Comic Sans MS", cursive;
-  --font-ui:   "Quicksand", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-hand: "Shantell Sans", "XiaolaiSC", "PingFang SC", cursive;  /* CJK hand: Xiaolai SC, self-hosted woff2/ttf */
+  --font-ui:   "Quicksand", "XiaolaiSC", ui-rounded, "PingFang SC", "Hiragino Sans GB", sans-serif;
 
   --t-display: 30px;  /* hand */
   --t-title:   22px;  /* hand */

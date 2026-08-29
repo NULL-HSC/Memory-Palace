@@ -141,7 +141,35 @@ a { text-decoration: none; color: inherit; }
   text-align: center;
   font-family: var(--font-hand);
   font-size: var(--t-title);
+  font-weight: 600;            /* 2026-08-29 product call: semibold reads better on the mat */
   color: var(--text-large);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.polaroid__caption > small {
+  display: block;
+  font-size: var(--t-micro);
+  color: rgba(23, 106, 145, .7);
+}
+/* The photo sits IN a recess: inset shadow makes the frame read as a real
+   mounted print. Applies to every polaroid photo area, incl. the blank one. */
+.polaroid__photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-photo);
+  box-shadow: inset 0 3px 10px rgba(15, 45, 66, .16), inset 0 -2px 4px rgba(15, 45, 66, .06);
+  pointer-events: none;
+}
+/* Blank polaroid: same frame as every other, but the photo area is the
+   gingham weave with a butter plus-disc — the "add a story" slot. It must
+   keep the SAME padding/shadow as .polaroid so it doesn't read half-sized. */
+.polaroid--blank .polaroid__photo {
+  background-color: var(--cream);
+  background-image:
+    repeating-linear-gradient(0deg,  var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2)),
+    repeating-linear-gradient(90deg, var(--gingham-line) 0 var(--gingham-field), transparent var(--gingham-field) calc(var(--gingham-field) * 2));
 }
 
 /* Washi tape. Decorative, always askew. Two faces: plain butter, or the
@@ -151,7 +179,7 @@ a { text-decoration: none; color: inherit; }
   width: 62px;
   height: 22px;
   background: rgba(255, 216, 106, .85);
-  box-shadow: 0 1px 3px rgba(23, 106, 145, .14);
+  box-shadow: 0 1px 3px rgba(15, 45, 66, .14);
 }
 .tape--gingham {
   background-color: rgba(255, 249, 238, .92);
@@ -162,6 +190,12 @@ a { text-decoration: none; color: inherit; }
 
 /* Binder clip + string. Use in pairs. The string runs to the top edge. */
 .hang { position: absolute; top: 0; width: 2px; background: var(--story); }
+/* Wall-fixed variant (2026-08-29): the clips belong to the WALL, not the card.
+   They stay put while polaroids slide under them — a card is taken off and
+   hung back onto the same pair. The string must reach up and tuck UNDER the
+   top band. Z-order is part of the contract:
+     header content 103 > top band 102 > wall clips 101 > focused card 100. */
+.hang--wall { z-index: 101; pointer-events: none; }
 
 /* ---- 4. Chrome -------------------------------------------- */
 
@@ -344,6 +378,88 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 0 0 3px var(--butter), var(--lift-1);
 }
 .picker__cell > img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ---- 4e. Scenery (landed 2026-08-29) --------------------------- */
+
+/* Top wave band. The fabric awning a screen hangs from. Three rules:
+   1) 2.5D gradient: near-white at the top, Mist through the body, Sky only at
+      the scalloped edge — the edge reads as thickness, the body stays clean.
+   2) The wave is IRREGULAR: every scallop has a different width and depth.
+      A repeating scallop is a bug, not a style.
+   3) Outer shadow is nearly nothing: black 5%, x+1/y+2, 2px blur. */
+.band {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 102;                       /* above wall-clips' strings, below header */
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, .05));
+}
+.band__body {
+  fill: url(#bandG);                  /* stops: #EAF6FB 0% → var(--mist) 72% → var(--sky) 100% */
+}
+.band__stitch {
+  fill: none;
+  stroke: var(--ink-blue);
+  stroke-opacity: .4;
+  stroke-width: 1.3;
+  stroke-dasharray: 5 6;
+  stroke-linecap: round;
+}
+
+/* Envelope wings. Bottom-of-screen decoration: TWO gingham triangles whose
+   hypotenuses run PAST the centre line so they overlap near the bottom edge —
+   like envelope side flaps. The centre stays open cream so nothing sits under
+   the hint text. A slightly darker patch in the overlap sells the layering. */
+.envelope-wings { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
+.envelope-wings__flap { fill: url(#envGingham); }
+.envelope-wings__overlap { fill: rgba(47, 159, 200, .14); }
+.envelope-wings__stitch {
+  fill: none;
+  stroke: var(--ink-blue);
+  stroke-opacity: .25;
+  stroke-width: 1.3;
+  stroke-dasharray: 5 6;
+  stroke-linecap: round;
+}
+
+/* Cinema. The premiere scene: a small theatre the reenactment video debuts in.
+   Just-opened side curtains (the same FOLDS weave as the transition curtain),
+   a valance across the top, a butter spotlight aimed at the screen, and the
+   screen itself in an Ink Blue bezel — the one place a large dark frame is
+   allowed, because a cinema screen needs a surround. */
+.cinema__curtain {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 34px;
+  background: repeating-linear-gradient(90deg, var(--ink-blue) 0 14px, var(--ink) 14px 22px, var(--ink-blue) 22px 40px, rgba(142, 212, 232, .35) 40px 44px);
+  z-index: 1;
+}
+.cinema__curtain--left  { left: 0;  box-shadow: 6px 0 14px rgba(18, 85, 113, .22); }
+.cinema__curtain--right { right: 0; box-shadow: -6px 0 14px rgba(18, 85, 113, .22); }
+.cinema__spotlight {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 46% at 50% 30%, rgba(255, 216, 106, .28) 0%, rgba(255, 216, 106, .10) 46%, transparent 74%),
+    radial-gradient(ellipse 120% 90% at 50% 110%, rgba(217, 238, 244, .55) 0%, transparent 60%);
+  z-index: 0;
+}
+.cinema__screen {
+  background: var(--ink-blue);
+  border-radius: var(--r-panel);
+  padding: 10px;
+  box-shadow: var(--lift-3);
+}
+
+/* Floor. A straight, warm strip at the bottom of a screen — the ground the
+   companion stands on. Replaces the old scalloped wave floor. */
+.floor {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 88px;
+  background: var(--floor);
+  pointer-events: none;
+}
 
 /* ---- 5. Chat ---------------------------------------------- */
 
