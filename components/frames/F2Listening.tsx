@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Waveform } from "../ui";
-import { transcriptBeats } from "@/lib/mock/transcript";
+import { transcribeAudio } from "@/lib/api";
 
 /**
  * F2 — 输入页(2026-08-29 交互改版)
@@ -24,19 +24,20 @@ export default function F2Listening({
   onDone: (transcript: string) => void;
 }) {
   const [seconds, setSeconds] = useState(0);
-  const [words, setWords] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [started, setStarted] = useState(false); // 曾经开始过录制(纯空闲态不渲染 …)
-  const [streamDone, setStreamDone] = useState(false); // mock 语流播完(录制仍可继续计时)
   const [typeMode, setTypeMode] = useState(false);
   const [typed, setTyped] = useState("");
   const [settling, setSettling] = useState(false);
-  const beatsRef = useRef<Array<{ word: string; delay: number }> | null>(null);
-  const beatIdxRef = useRef(0);
-  const beatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordedBlobRef = useRef<Blob | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const cursorRef = useRef(0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const pRef = useRef<HTMLParagraphElement>(null);
   const pendingCaretRef = useRef<number | null>(null); // 点按进入打字时要落的光标位置
@@ -44,60 +45,84 @@ export default function F2Listening({
   /* 卸载清理:录制语流 / 秒表 / 沉淀态延迟,任何定时器都不许泄漏 */
   useEffect(() => {
     return () => {
-      if (beatTimerRef.current) clearTimeout(beatTimerRef.current);
       if (tickRef.current) clearInterval(tickRef.current);
-      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      recorderRef.current?.stop();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [words]);
+  }, [typed]);
 
-  /** 依次上屏下一个词(mock ASR 语流;真 ASR 换成识别结果回调) */
-  const scheduleNextBeat = () => {
-    const beats = beatsRef.current;
-    if (!beats || beatIdxRef.current >= beats.length) return;
-    const i = beatIdxRef.current;
-    beatTimerRef.current = setTimeout(
-      () => {
-        setWords((w) => [...w, beats[i].word]);
-        beatIdxRef.current = i + 1;
-        if (beatIdxRef.current >= beats.length) setStreamDone(true);
-        else scheduleNextBeat();
-      },
-      (i === 0 ? 600 : 0) + beats[i].delay // 首拍保留 600ms lead-in
-    );
-  };
-
-  /**
-   * 开始/恢复录制:启动秒表 + 语流上屏 + 波形激活。
-   * 【真 ASR 接入点】换成 ASR.start(),识别结果回调里 setWords((w) => [...w, word]),
-   * mock 语流(transcriptBeats / scheduleNextBeat)届时整体删除。
-   */
-  const startRecording = () => {
+  const startRecording = async () => {
     if (recording || settling) return;
-    if (!beatsRef.current) beatsRef.current = transcriptBeats();
-    setStarted(true);
-    setRecording(true);
-    scheduleNextBeat();
-    tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      // Each recording owns its chunks so a previous segment cannot be resent.
+      const chunks: Blob[] = [];
+      chunksRef.current = chunks;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      streamRef.current = stream;
+      setStarted(true);
+      setRecording(true);
+      tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    } catch (e) {
+      setError(e instanceof DOMException && e.name === "NotAllowedError"
+        ? "Microphone access was denied."
+        : "Could not access the microphone.");
+    }
   };
 
   /**
    * 暂停录制:停字、停表、波形静止,已上屏文字保留。
    * 【真 ASR 接入点】换成 ASR.stop()(或停止推流)。
    */
-  const stopRecording = () => {
+  const stopRecording = (): Promise<Blob | null> => {
     setRecording(false);
-    if (beatTimerRef.current) {
-      clearTimeout(beatTimerRef.current);
-      beatTimerRef.current = null;
-    }
     if (tickRef.current) {
       clearInterval(tickRef.current);
       tickRef.current = null;
     }
+    const recorder = recorderRef.current;
+    const chunks = chunksRef.current;
+    recorderRef.current = null;
+    const stopped = recorder
+      ? new Promise<Blob>((resolve) => {
+          recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: recorder.mimeType || "audio/webm" })), { once: true });
+          recorder.stop();
+        })
+      : Promise.resolve<Blob | null>(null);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    void stopped.then((blob) => {
+      if (blob) {
+        recordedBlobRef.current = blob;
+        console.log("[recording] completed", { bytes: blob.size, type: blob.type });
+        setTranscribing(true);
+        console.log("[transcription] calling /api/transcriptions", { bytes: blob.size, type: blob.type });
+        void transcribeAudio(blob)
+          .then((text) => {
+            console.log("[transcription] completed", { characters: text.length });
+            const value = text.trim();
+            if (!value) return;
+            setTyped((current) => {
+              const position = Math.max(0, Math.min(cursorRef.current, current.length));
+              cursorRef.current = position + value.length;
+              return `${current.slice(0, position)}${value}${current.slice(position)}`;
+            });
+          })
+          .catch((e) => setError(e instanceof Error ? e.message : "Transcription failed. Please try again."))
+          .finally(() => setTranscribing(false));
+      }
+    });
+    return stopped;
   };
 
   /* 语音/打字是同一份文本:typed 是主缓冲,words 只是「最近一段语音」的临时区。
@@ -146,19 +171,32 @@ export default function F2Listening({
   };
 
   /* 语流进行中(控制末 3 词的 in-flight 样式);波形只看录制开关 */
-  const streaming = recording && !streamDone;
+  const streaming = recording;
 
-  // 寄出门槛:≥50 字(防过短文本进人设提取);不足时提示用户把故事说完整
+  // 寄出门槛:≥50 字(防过短文本进人设提取);不足时提示用户把故事说完整，转写/录制中禁止寄出
   const MIN_SEND_LEN = 50;
   const fullText = (typeMode ? typed : mergedText).trim();
-  const canSend = fullText.length >= MIN_SEND_LEN;
+  const canSend = fullText.length >= MIN_SEND_LEN && !recording && !transcribing;
 
-  const handleSend = () => {
-    if (!canSend || settling) return;
+
+  const handleSend = async () => {
+    console.log("[recording] send clicked", {
+      canSend,
+      settling,
+      started,
+      recording,
+      chunks: chunksRef.current.length,
+      cachedBytes: recordedBlobRef.current?.size ?? 0,
+    });
+    if (!canSend || settling) {
+      console.log("[recording] send skipped");
+      return;
+    }
     setSettling(true); // 寄出沉淀态:文字落定后提交(理理理.md §7)
-    stopRecording();
+    if (recording) await stopRecording();
     // 提交用户实际输入的内容(语音+打字合稿),而不是完整 mock
     settleTimerRef.current = setTimeout(() => onDone(fullText), 800);
+
   };
 
   const mm = Math.floor(seconds / 60);
@@ -203,13 +241,22 @@ export default function F2Listening({
       <span className="meta-italic" style={{ marginTop: 34, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
         {statusText}
       </span>
+      {error && (
+        <div style={{ marginTop: 10, color: "var(--accent)", fontSize: 13, fontStyle: "italic" }} role="alert">
+          {error}
+        </div>
+      )}
 
       {/* 输入区(信纸):打字模式铺满 textarea;否则展示转写,点空白处弹键盘 */}
       {typeMode ? (
         <textarea
           ref={textRef}
           value={typed}
-          onChange={(e) => setTyped(e.target.value)}
+          onChange={(e) => {
+            cursorRef.current = e.currentTarget.selectionStart;
+            setTyped(e.target.value);
+          }}
+          onSelect={(e) => { cursorRef.current = e.currentTarget.selectionStart; }}
           placeholder="想到哪儿写到哪儿…"
           aria-label="把故事打出来"
           style={{
