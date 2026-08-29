@@ -110,8 +110,10 @@ export default function F2Listening({
   /* 语流进行中(控制末 3 词的 in-flight 样式);波形只看录制开关 */
   const streaming = recording && !streamDone;
 
-  // 语音模式至少 5 个词才可寄出(防过短文本进人设提取);打字模式有字即可
-  const canSend = typeMode ? typed.trim().length > 0 : words.length >= 5;
+  // 寄出门槛:≥50 字(防过短文本进人设提取);不足时提示用户把故事说完整
+  const MIN_SEND_LEN = 50;
+  const fullText = typeMode ? typed.trim() : words.join(" ");
+  const canSend = fullText.length >= MIN_SEND_LEN;
 
   const handleSend = () => {
     if (!canSend || settling) return;
@@ -136,31 +138,26 @@ export default function F2Listening({
 
   return (
     <div className="frame frame-enter">
-      {/* nav:右上角「寄出」图标 = 确认,直接进下一页 */}
-      <div className="nav-bar">
+      {/* nav:右上角「寄出」= 确认,直接进下一页;标题绝对居中 */}
+      <div className="nav-bar" style={{ position: "relative" }}>
         <button className="nav-side back-chevron" onClick={onBack} aria-label="返回">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="nav-title">新故事</span>
+        <span className="nav-title" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}>新故事</span>
         <button
-          className="nav-side"
+          className="btn"
           onClick={handleSend}
           disabled={!canSend || settling}
           aria-label="寄出这封信"
-          style={{
-            justifyContent: "flex-end",
-            marginRight: -12,
-            color: "var(--ink-blue)",
-            opacity: canSend && !settling ? 1 : 0.35,
-            transition: "opacity 300ms",
-          }}
+          style={{ minHeight: 40, padding: "0 14px", fontSize: 14, gap: 6, flexShrink: 0 }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M22 2L11 13" />
             <path d="M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
+          寄出
         </button>
       </div>
 
@@ -210,11 +207,13 @@ export default function F2Listening({
         </div>
       )}
 
-      {/* 声浪:录制中激活,空闲/暂停/打字静止 */}
-      <Waveform active={recording && !typeMode} />
+      {/* 声浪:录制中激活,空闲/暂停/打字静止(抬升到信封上方) */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <Waveform active={recording && !typeMode} />
+      </div>
 
-      {/* 唯一的控制:底部居中麦克风,点了才开始语音输入 */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 24 }}>
+      {/* 唯一的控制:底部居中麦克风,点了才开始语音输入(骑在信封上沿) */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 16 }}>
         <button
           onClick={toggleRecording}
           aria-label={recording ? "暂停录音" : "开始录音"}
@@ -234,8 +233,8 @@ export default function F2Listening({
           {/* 录音中视觉态:外圈双涟漪(复用 listen keyframes) */}
           {recording && !typeMode && (
             <>
-              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid var(--coral)", animation: "listen 1.8s ease-out infinite", pointerEvents: "none" }} />
-              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid var(--coral)", animation: "listen 1.8s ease-out 0.9s infinite", pointerEvents: "none" }} />
+              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(47,159,200,0.55)", animation: "listen 1.8s ease-out infinite", pointerEvents: "none" }} />
+              <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1.5px solid rgba(47,159,200,0.55)", animation: "listen 1.8s ease-out 0.9s infinite", pointerEvents: "none" }} />
             </>
           )}
           {recording && !typeMode ? (
@@ -251,11 +250,51 @@ export default function F2Listening({
         </button>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: 16 }}>
-        <span style={{ fontSize: 13, fontWeight: 300, fontStyle: "italic", color: "var(--placeholder)" }}>
-          {typeMode ? "写完点右上角寄出。" : recording ? "想到哪儿说到哪儿。" : "说完点右上角寄出。"}
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", marginTop: 16, marginBottom: 46 }}>
+        <span style={{ fontSize: 13, fontWeight: 300, fontStyle: "italic", color: "var(--ink)" }}>
+          {canSend
+            ? typeMode
+              ? "写完点右上角寄出。"
+              : recording
+                ? "想到哪儿说到哪儿。"
+                : "说完点右上角寄出。"
+            : `把故事说完整一些 · 50 字以上才能寄出(${fullText.length}/50)`}
         </span>
       </div>
+
+      {/* ══ 底部装饰:格纹信封侧翼(左右两片三角,中间留空不压文字) ══ */}
+      <svg
+        aria-hidden
+        viewBox="0 0 390 120"
+        preserveAspectRatio="none"
+        style={{
+          position: "absolute",
+          left: "calc(-1 * var(--screen-x))",
+          right: "calc(-1 * var(--screen-x))",
+          bottom: "calc(-1 * max(var(--screen-bottom), env(safe-area-inset-bottom)))",
+          width: "calc(100% + 2 * var(--screen-x))",
+          height: 120,
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      >
+        <defs>
+          <pattern id="envGingham" width="26" height="26" patternUnits="userSpaceOnUse">
+            <rect width="26" height="26" fill="#EAF6FA" />
+            <rect width="13" height="26" fill="rgba(47,159,200,0.2)" />
+            <rect width="26" height="13" fill="rgba(47,159,200,0.2)" />
+          </pattern>
+        </defs>
+        {/* 左翻盖三角(斜边延过中线,与右翼交叠) */}
+        <path d="M0 0 L0 120 L310 120 Z" fill="url(#envGingham)" />
+        {/* 右翻盖三角(压在上层) */}
+        <path d="M390 0 L390 120 L80 120 Z" fill="url(#envGingham)" />
+        {/* 交叠区:底部两片相交处略加深,读出层叠感 */}
+        <path d="M80 120 L195 75 L310 120 Z" fill="rgba(47,159,200,0.14)" />
+        {/* 翻盖车缝线 */}
+        <path d="M0 0 L310 120" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.25" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+        <path d="M390 0 L80 120" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.25" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+      </svg>
     </div>
   );
 }

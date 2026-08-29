@@ -45,7 +45,7 @@ export function CurtainVeil({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
-    const t = setTimeout(onDone, 1250); // 950ms 拉开 + 收尾宽限
+    const t = setTimeout(onDone, 2150); // 1650ms 拉开 + 收尾宽限
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(t);
@@ -60,7 +60,7 @@ export function CurtainVeil({ onDone }: { onDone: () => void }) {
     [side]: 0,
     background: FOLDS,
     transform: open ? `translateX(${side === "left" ? "-104%" : "104%"})` : "none",
-    transition: "transform 950ms var(--ease-soft)",
+    transition: "transform 1650ms var(--ease-soft)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "flex-end",
@@ -93,7 +93,7 @@ export function CurtainVeil({ onDone }: { onDone: () => void }) {
       <Valance
         style={{
           transform: open ? "translateY(-110%)" : "none",
-          transition: "transform 800ms var(--ease-soft) 120ms",
+          transition: "transform 1450ms var(--ease-soft) 250ms",
         }}
       />
     </div>
