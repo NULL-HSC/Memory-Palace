@@ -11,6 +11,10 @@ import { transcriptBeats } from "@/lib/mock/transcript";
  * - 底部不再有 Type it / Done;确认入口改为右上角「寄出」图标(send letter)→ 直接进下一页
  * startRecording / stopRecording 仍是未来真 ASR 的接入点(见函数内注释)。
  */
+/* 信纸横线:行距必须等于横线周期(kit letter 规则);暖调(butter-under)低透明,字压在线上 */
+const RULE = 32;
+const LETTER_LINES = `repeating-linear-gradient(0deg, transparent 0 ${RULE - 1}px, rgba(233,184,74,0.3) ${RULE - 1}px ${RULE}px)`;
+
 export default function F2Listening({
   onBack,
   onDone,
@@ -183,7 +187,9 @@ export default function F2Listening({
             background: "transparent",
             fontSize: 21,
             fontWeight: 300,
-            lineHeight: 1.55,
+            lineHeight: `${RULE}px`,
+            backgroundImage: LETTER_LINES,
+            backgroundAttachment: "local", // 横线跟着内容一起滚
             color: "var(--ink)",
           }}
         />
@@ -196,7 +202,7 @@ export default function F2Listening({
           aria-label="点这里打字"
           style={{ marginTop: 12, flex: 1, minHeight: 0, overflowY: "auto", cursor: "text" }}
         >
-          <p style={{ margin: 0, fontSize: 21, fontWeight: 300, lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 21, fontWeight: 300, lineHeight: `${RULE}px`, backgroundImage: LETTER_LINES, backgroundAttachment: "local" }}>
             {words.map((w, i) => (
               <span key={i} className={i >= words.length - 3 && streaming ? "word-partial" : "word-final"}>
                 {w}{" "}
