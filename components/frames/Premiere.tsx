@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { CoverArt } from "../ui";
 import { longDate } from "@/lib/mock/titles";
 
@@ -23,6 +23,28 @@ export default function Premiere({
   onBack: () => void; // 放弃这个故事
 }) {
   const [ended, setEnded] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  /** 本地演示:没有真后端地址时放 public/videos/demo.mp4;文件缺失/解码失败回退占位 */
+  const src = playbackUrl ?? "/videos/demo.mp4";
+  const fmt = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const ss = Math.floor(sec % 60);
+    return `${m}:${String(ss).padStart(2, "0")}`;
+  };
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      void v.play().catch(() => setFailed(true));
+    } else {
+      v.pause();
+    }
+  };
 
   return (
     <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden" }}>
@@ -126,17 +148,60 @@ export default function Premiere({
               boxShadow: "inset 0 3px 10px rgba(15,45,66,0.28)",
             }}
           >
-            {playbackUrl ? (
-              <video
-                src={playbackUrl}
-                autoPlay
-                controls
-                playsInline
-                onEnded={() => setEnded(true)}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-              />
+            {!failed ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={src}
+                  playsInline
+                  preload="metadata"
+                  onClick={togglePlay}
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                  onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+                  onEnded={() => {
+                    setEnded(true);
+                    setPlaying(false);
+                  }}
+                  onError={() => setFailed(true)}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }}
+                />
+                {/* 播放/重播碟:暂停或播完时居中显示 */}
+                {!playing && (
+                  <button
+                    onClick={togglePlay}
+                    aria-label={ended ? "重播" : "播放"}
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      background: "var(--butter)",
+                      boxShadow: "0 4px 0 var(--butter-under)",
+                      zIndex: 3,
+                    }}
+                  >
+                    {ended ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />
+                      </svg>
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--ink-blue)" aria-hidden>
+                        <path d="M8 5.5v13l11-6.5z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </>
             ) : (
-              /* 演示模式 / 视频失败兜底:占位静帧 + 说明 */
+              /* 视频缺失/解码失败兜底:占位静帧 + 说明 */
               <>
                 <CoverArt cover="sage" />
                 <div
@@ -151,22 +216,6 @@ export default function Premiere({
                     background: "rgba(18,85,113,0.18)",
                   }}
                 >
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 56,
-                      height: 56,
-                      borderRadius: "50%",
-                      background: "var(--butter)",
-                      boxShadow: "0 4px 0 var(--butter-under)",
-                    }}
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--ink-blue)" aria-hidden>
-                      <path d="M8 5.5v13l11-6.5z" />
-                    </svg>
-                  </span>
                   <span className="meta-italic" style={{ fontSize: 12, color: "var(--cream)", textShadow: "0 1px 6px rgba(18,85,113,0.6)" }}>
                     演示模式:这里会播放生成的演绎视频
                   </span>
@@ -194,16 +243,60 @@ export default function Premiere({
                 display: "flex",
                 alignItems: "center",
                 gap: 7,
+                zIndex: 3,
               }}
             >
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--story)", flexShrink: 0 }} />
-              <span style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--story)", opacity: 0.55 }} />
-              <span style={{ fontSize: 11, color: "var(--story)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
+              {/* 进度条:跟着真实播放进度走,可点按跳转 */}
+              <span
+                onClick={(e) => {
+                  const v = videoRef.current;
+                  if (!v || !duration) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  v.currentTime = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * duration;
+                }}
+                style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(47,159,200,0.3)", cursor: "pointer", position: "relative" }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: `${duration ? (current / duration) * 100 : 0}%`,
+                    borderRadius: 2,
+                    background: "var(--story)",
+                    transition: "width 200ms linear",
+                  }}
+                />
+              </span>
+              <span style={{ fontSize: 11, color: "var(--story)", fontVariantNumeric: "tabular-nums" }}>
+                {fmt(current)} / {duration ? fmt(duration) : "0:00"}
+              </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M11 5L6 9H2v6h4l5 4V5z" />
                 <path d="M15.5 8.5a5 5 0 0 1 0 7" />
               </svg>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--story)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--story)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                role="button"
+                aria-label="全屏播放"
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  const v = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+                  if (!v) return;
+                  if (v.requestFullscreen) void v.requestFullscreen().catch(() => undefined);
+                  else v.webkitEnterFullscreen?.();
+                }}
+              >
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
               </svg>
             </div>

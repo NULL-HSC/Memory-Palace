@@ -371,15 +371,15 @@ textarea {
 /* 渐变描边卡(全局卡片规范 2026-08-29 产品定):浅蓝→深蓝→浅蓝绕卡交错;
    卡面仍是 cream(padding-box),边框层在 border-box,替代一切纯色蓝边 */
 .card-frame {
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;
   background:
     linear-gradient(var(--raised), var(--raised)) padding-box,
     linear-gradient(135deg, var(--mist) 0%, var(--sky) 50%, var(--mist) 100%) border-box;
 }
-/* 选中档:深蓝渐变(参考选角页:未选浅蓝、选中深蓝) */
+/* 选中档:深蓝渐变边 + 浅蓝填充(与常态拉开:边更深、面更蓝) */
 .card-frame--active {
   background:
-    linear-gradient(var(--raised), var(--raised)) padding-box,
+    linear-gradient(var(--mist), var(--mist)) padding-box,
     linear-gradient(135deg, var(--story) 0%, var(--ink-blue) 50%, var(--story) 100%) border-box;
 }
 

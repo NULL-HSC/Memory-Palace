@@ -67,14 +67,16 @@ a { text-decoration: none; color: inherit; }
    one is deep. Solid ink borders are a bug. Card face stays cream in the
    padding-box; the gradient lives in the border-box. */
 .card-frame {
-  border: 2px solid transparent;
+  border: 1.5px solid transparent;   /* thin — 2px reads chunky, this is a bug we already shipped once */
   background:
     linear-gradient(var(--raised), var(--raised)) padding-box,
     linear-gradient(135deg, var(--mist) 0%, var(--sky) 50%, var(--mist) 100%) border-box;
 }
+/* Active: DEEP gradient border + blue (Mist) fill. The two states must be
+   unmistakable at a glance: light edge + cream face vs deep edge + blue face. */
 .card-frame--active {
   background:
-    linear-gradient(var(--raised), var(--raised)) padding-box,
+    linear-gradient(var(--mist), var(--mist)) padding-box,
     linear-gradient(135deg, var(--story) 0%, var(--ink-blue) 50%, var(--story) 100%) border-box;
 }
 
