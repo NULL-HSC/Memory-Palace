@@ -262,10 +262,11 @@ interface BackendPersona {
 
 const ME_AVATAR = "/avatars/avatar.png";
 const AVATAR_POOL = [
-  "/avatars/av-bear.png",
-  "/avatars/av-bunny.png",
-  "/avatars/av-duck.png",
   "/avatars/av-cat.png",
+  "/avatars/av-glasses.png",
+  "/avatars/av-bunny.png",
+  "/avatars/av-bear.png",
+  "/avatars/av-duck.png",
   "/avatars/av-fox.png",
   "/avatars/av-dog.png",
 ];

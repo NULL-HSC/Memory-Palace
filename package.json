@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "next dev -H 0.0.0.0",
+    "dev:clean": "rm -rf .next node_modules/.cache && next dev -H 0.0.0.0",
     "build": "next build",
     "build:app": "mv app/api api-bak; BUILD_TARGET=app next build; mv api-bak app/api",
     "sync:ios": "npm run build:app && npx cap sync ios",

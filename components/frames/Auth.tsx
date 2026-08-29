@@ -20,14 +20,14 @@ const CODE_RE = /^\d{6}$/;
 
 function validate(mode: Mode, f: Record<FieldKey, string>): Partial<Record<FieldKey, string>> {
   const errors: Partial<Record<FieldKey, string>> = {};
-  if (!f.phone.trim()) errors.phone = "Please enter your phone number";
+  if (!f.phone.trim()) errors.phone = "请填手机号";
   if (f.password.length < 8 || f.password.length > 128)
-    errors.password = "Password needs 8–128 characters";
+    errors.password = "密码需要 8–128 位";
   if (mode === "register") {
     const username = f.username.trim();
     if (username.length < 1 || username.length > 64)
-      errors.username = "Pick a name between 1–64 characters";
-    if (!CODE_RE.test(f.code.trim())) errors.code = "The code is 6 digits";
+      errors.username = "名字要在 1–64 个字之间";
+    if (!CODE_RE.test(f.code.trim())) errors.code = "验证码是 6 位数字";
   }
   return errors;
 }
@@ -110,7 +110,7 @@ export default function Auth({
   /* 注册第一步:发验证码;demo 环境后端直接返回码,预填并展示 */
   const sendCode = async () => {
     if (!fields.phone.trim()) {
-      setErrors((prev) => ({ ...prev, phone: "Enter your phone number first" }));
+      setErrors((prev) => ({ ...prev, phone: "先填手机号再发验证码" }));
       return;
     }
     setSendingCode(true);
@@ -120,12 +120,12 @@ export default function Auth({
       if (result.verification_code) {
         setFields((prev) => ({ ...prev, code: result.verification_code! }));
         setErrors((prev) => ({ ...prev, code: undefined }));
-        setCodeHint(`demo code ${result.verification_code} — prefilled for you`);
+        setCodeHint(`demo 验证码 ${result.verification_code},已帮你填好`);
       } else {
-        setCodeHint(`code sent · expires in ${Math.round(result.expires_in_seconds / 60)} min`);
+        setCodeHint(`验证码已发出,${Math.round(result.expires_in_seconds / 60)} 分钟内有效`);
       }
     } catch (error) {
-      setFormError(backendMessage(error, "Could not send the code"));
+      setFormError(backendMessage(error, "验证码没发出去,再试试"));
     } finally {
       setSendingCode(false);
     }
@@ -149,7 +149,7 @@ export default function Auth({
             });
       onAuthed(auth.user.username);
     } catch (error) {
-      setFormError(backendMessage(error, "Something went wrong — please try again"));
+      setFormError(backendMessage(error, "出了点问题,再试一次"));
     } finally {
       setBusy(false);
     }
@@ -157,56 +157,83 @@ export default function Auth({
 
   return (
     <div className="frame frame-enter" style={{ overflow: "hidden" }}>
-      {/* header:品牌布标签 + companion */}
+      {/* header:ribbon 品牌标题牌(缺口右端,kit §4 chrome)+ companion */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0 }}>
         <div>
-          <span
-            style={{
-              display: "inline-block",
-              background: "var(--story)",
-              color: "var(--text-on-ink)",
-              fontSize: 17,
-              fontWeight: 500,
-              padding: "5px 16px 6px",
-              borderRadius: 9,
-              transform: "rotate(-2deg)",
-              boxShadow: "var(--lift-2)",
-            }}
-          >
+          <span className="ribbon" style={{ transform: "rotate(-1.5deg)" }}>
             理理理 lilili
           </span>
           <div className="meta-italic" style={{ marginTop: 10 }}>
-            every story gets a room
+            每个故事都有一个房间
           </div>
         </div>
         <Companion size={72} className="anim-bob" />
       </div>
 
-      {/* 表单 */}
-      <div style={{ marginTop: 34, flexShrink: 0 }}>
-        <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>
-          {mode === "login" ? "Welcome back" : "Make your room"}
-        </div>
-        <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
-          {mode === "login" ? "sign in to keep your stories close" : "a phone number is all it takes"}
-        </div>
+      {/* 表单:一封信纸卡(登录 = 在信纸上落笔),左上角一条和纸胶带,顶边露一圈信衬 gingham */}
+      <div style={{ marginTop: 28, flexShrink: 0 }}>
+        <div
+          style={{
+            position: "relative",
+            background: "var(--raised)",
+            borderRadius: "var(--r-panel)",
+            boxShadow: "var(--lift-2)",
+            padding: "26px 18px 18px",
+            transform: "rotate(-0.6deg)",
+          }}
+        >
+          {/* 和纸胶带:每屏一条额度用在这,斜 -7° 贴角 */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -10,
+              left: 22,
+              width: 62,
+              height: 22,
+              background: "rgba(255,216,106,0.85)",
+              boxShadow: "0 1px 3px rgba(15,45,66,0.14)",
+              transform: "rotate(-7deg)",
+            }}
+          />
+          {/* 信衬窄带:gingham strip 尺度(7px),只在信纸顶边露一圈 */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 10,
+              borderRadius: "var(--r-panel) var(--r-panel) 0 0",
+              backgroundColor: "var(--cream)",
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(47,159,200,0.26) 0 7px, transparent 7px 14px), repeating-linear-gradient(90deg, rgba(47,159,200,0.26) 0 7px, transparent 7px 14px)",
+            }}
+          />
+          <div style={{ fontSize: 25, fontWeight: 400, lineHeight: 1.2 }}>
+            {mode === "login" ? "欢迎回来" : "布置你的房间"}
+          </div>
+          <div className="meta-italic" style={{ fontSize: 13, marginTop: 6 }}>
+            {mode === "login" ? "登录,把故事放在身边" : "一个手机号就够了"}
+          </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
-          <Field label="phone number" error={errors.phone}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 20 }}>
+          <Field label="手机号" error={errors.phone}>
             <input
               value={fields.phone}
               onChange={set("phone")}
               placeholder="138 0000 0000"
               inputMode="tel"
               autoComplete="tel"
-              aria-label="Phone number"
+              aria-label="手机号"
               style={inputStyle}
             />
           </Field>
 
           {mode === "register" && (
             <>
-              <Field label="6-digit code" error={errors.code}>
+              <Field label="6 位验证码" error={errors.code}>
                 <input
                   value={fields.code}
                   onChange={set("code")}
@@ -214,7 +241,7 @@ export default function Auth({
                   inputMode="numeric"
                   maxLength={6}
                   autoComplete="one-time-code"
-                  aria-label="Verification code"
+                  aria-label="验证码"
                   style={inputStyle}
                 />
                 <button
@@ -230,7 +257,7 @@ export default function Auth({
                     marginBottom: 2,
                   }}
                 >
-                  {sendingCode ? "sending…" : fields.code ? "resend" : "send code"}
+                  {sendingCode ? "发送中…" : fields.code ? "重发" : "发验证码"}
                 </button>
               </Field>
               {codeHint && (
@@ -238,21 +265,21 @@ export default function Auth({
                   {codeHint}
                 </div>
               )}
-              <Field label="what should we call you?" error={errors.username}>
+              <Field label="怎么称呼你?" error={errors.username}>
                 <input
                   value={fields.username}
                   onChange={set("username")}
-                  placeholder="your name"
+                  placeholder="你的名字"
                   maxLength={64}
                   autoComplete="nickname"
-                  aria-label="Username"
+                  aria-label="昵称"
                   style={inputStyle}
                 />
               </Field>
             </>
           )}
 
-          <Field label="password · 8–128 characters" error={errors.password}>
+          <Field label="密码 · 8–128 位" error={errors.password}>
             <input
               value={fields.password}
               onChange={set("password")}
@@ -260,18 +287,19 @@ export default function Auth({
               type="password"
               maxLength={128}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              aria-label="Password"
+              aria-label="密码"
               style={inputStyle}
             />
           </Field>
         </div>
 
-        {/* 后端错误:统一信封的 message 原样展示 */}
-        {formError && (
-          <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", marginTop: 12 }}>
-            {formError}
-          </div>
-        )}
+          {/* 后端错误:统一信封的 message 原样展示 */}
+          {formError && (
+            <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", marginTop: 12 }}>
+              {formError}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0 }} />
@@ -284,7 +312,7 @@ export default function Auth({
         style={{ width: "100%", flexShrink: 0 }}
       >
         <span style={{ fontSize: 19, fontWeight: 700 }}>
-          {busy ? "one moment…" : mode === "login" ? "Enter my room" : "Create my room"}
+          {busy ? "稍等一下…" : mode === "login" ? "回到我的房间" : "布置我的房间"}
         </span>
       </button>
 
@@ -304,7 +332,7 @@ export default function Auth({
             paddingBottom: 2,
           }}
         >
-          {mode === "login" ? "New here? Create an account" : "Already have a room? Sign in"}
+          {mode === "login" ? "第一次来?注册一个" : "已有房间?直接登录"}
         </button>
       </div>
 
@@ -315,7 +343,7 @@ export default function Auth({
             onClick={onSkipDemo}
             style={{ fontSize: 12, fontStyle: "italic", color: "var(--placeholder)" }}
           >
-            skip for now · demo only
+            先逛逛 · 仅演示
           </button>
         </div>
       )}

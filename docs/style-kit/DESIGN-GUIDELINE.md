@@ -120,9 +120,11 @@ it; 19px bold clears it. Do not reduce this value.
 - Shantell Sans is my substitute for whatever the designer lettered the mock in.
   **Confirm the real face before build** — if it is licensed, swap it in `tokens.css`
   only.
-- CJK falls back to `PingFang SC` / `Hiragino Sans GB`. Neither hand font supports CJK,
-  so **a Chinese build MUST NOT use the hand font for CJK strings** — set CJK titles in
-  the UI font at weight 700 instead. Test with 中文 before shipping.
+- CJK: the product owner confirmed **Xiaolai SC (小赖字体)** as the CJK hand face
+  (2026-08-29, self-hosted like the Latin faces — never a CDN at demo time). Stack:
+  Latin hand → XiaolaiSC → PingFang SC. Latin body → XiaolaiSC → PingFang SC.
+  Chinese titles SHOULD use XiaolaiSC at weight 400–600 (the file ships Regular only;
+  600 is synthetic — confirmed acceptable by product).
 - Hand-lettered text is for **names of things**: a story title, a screen title. Never
   for instructions, errors, dates, or numbers.
 
@@ -133,8 +135,10 @@ it; 19px bold clears it. Do not reduce this value.
   elements sit at `bottom: 150px` or higher.
 - Radii come from tokens. **The only near-square corner in the system is a printed
   photo inside a frame** (`--r-photo`, 6px). Everything else is 16px or rounder.
-- Three blur levels (`--lift-1/2/3`), all `rgba(23,106,145,α)` — Ink Blue. **Never a
-  grey or black shadow.**
+- Three blur levels (`--lift-1/2/3`). 2026-08-29 product calibration: shadow colour moved
+  from saturated Ink Blue to **near-black navy `rgba(15,45,66,α)` at low alpha with tight
+  blur** — saturated blue shadows read as a glow; navy at 5–10% reads as a natural drop
+  shadow. Still never grey.
 - Pressable things use a hard underside (`--press-butter`, `--press-sky`) *instead of*
   a blur, and translate down onto it when active. This is the single most
   identity-carrying detail in the system; do not replace it with an opacity change.
@@ -168,6 +172,16 @@ These are the vocabulary. Use them; do not invent new ones.
 | **Envelope** `.envelope` | Cream body, gingham flap lining | Closes a letter. The lining is where gingham belongs, not the body. |
 | **Paper grain** `.grain` | Noise overlay | On `.screen`, always, always `pointer-events: none`. |
 | **Sparkle ticks** | 2–3 short blue strokes | Marks something interactive or new. Max 2 clusters per screen. |
+
+> **Landed since this table was signed off (2026-08-29, product-confirmed):**
+>
+> | Material | What it is | Rules |
+> |---|---|---|
+> | **Wave band (2.5D)** | Top fabric awning with gradient | Near-white top → Mist body → **Sky only at the scalloped edge**; scallops must be irregular; outer shadow black 5%, x+1/y+2, 2px blur |
+> | **Envelope wings** | Bottom decoration: two overlapping gingham triangles | Hypotenuses run past centre so flaps overlap at the bottom edge; centre stays open cream — never under text |
+> | **Card clips** | One clip per polaroid, colours rotate (story/butter/ink-blue/sky) | The clip belongs to the CARD — it travels with the card through the fan. Supersedes the same-day “wall clips” call (2026-08-29, product reversal). |
+> | **Cinema** | Premiere scene: side curtains + valance + spotlight + Ink-Blue screen bezel | The one place a large dark frame is allowed (the cinema screen) |
+> | **Floor** | Straight warm strip at screen bottom, `--floor` | Replaces the scalloped wave floor; walls stay cream |
 
 ### 3.1 Gingham — the signature surface
 
@@ -406,7 +420,7 @@ Six stickers ship in `assets/`: `ip-cat-dj`, `ip-bunny-scout`, `ip-dog-captain`,
 - Put a hex literal outside `tokens.css`.
 - Put cream or white text on `--sky`, `--story`, or `--coral`.
 - Use `--story` or `--coral` as a text colour or a text background.
-- Use a grey or black shadow. Shadows are `rgba(23,106,145,α)`.
+- Use a grey shadow. Shadows are `rgba(15,45,66,α)` (near-black navy, low alpha, tight blur).
 - Use gradients, glassmorphism, or blur backdrops.
 - Use emoji as an icon.
 - Set CJK in the hand font.

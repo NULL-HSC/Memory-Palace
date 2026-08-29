@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import type { CharacterId, StoryComment } from "@/lib/types";
 import { CharacterFace, Companion, type FaceId } from "../characters";
 import { characterById } from "@/lib/mock/characters";
-import { CoverArt } from "../ui";
+import StoryPlayer from "../ui/StoryPlayer";
+import ChatInput from "../ui/ChatInput";
 
 /**
  * 故事详情 · 只读(2026-08-29 产品确认)
@@ -68,6 +69,7 @@ export default function StoryDetail({
 }) {
   const [comments, setComments] = useState<StoryComment[]>(initialComments);
   const [draft, setDraft] = useState("");
+  const [composing, setComposing] = useState(false); // 先「写留言」按钮,点了才展开输入条
 
   const leaveComment = () => {
     const text = draft.trim();
@@ -95,15 +97,18 @@ export default function StoryDetail({
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 18, paddingBottom: 12 }}>
         {/* 封面卡(裱卡手法,同长廊) */}
         <div
+          className="card-frame"
           style={{
-            background: "var(--raised)",
             borderRadius: "var(--r-panel)",
             padding: "12px 12px 16px",
-            boxShadow: "var(--shadow-print-mid)",
+            boxShadow: "var(--lift-2)",
           }}
         >
-          <div style={{ position: "relative", height: 170, borderRadius: "var(--r-photo)", overflow: "hidden" }}>
-            <CoverArt cover={cover} />
+          <div style={{ position: "relative", aspectRatio: "16 / 9", borderRadius: "var(--r-photo)", overflow: "hidden", background: "var(--mist)" }}>
+            {/* 故事演绎视频:播放器交互同首映页;mock 阶段统一放 demo 片 */}
+            <StoryPlayer src="/videos/demo.mp4" poster={cover.startsWith("/") ? cover : undefined} />
+            {/* 凹槽内阴影:压在画面上,读作裱进框里的真照片(不挡播放交互) */}
+            <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)", pointerEvents: "none", zIndex: 2 }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 12, padding: "0 2px" }}>
             <span style={{ fontFamily: "var(--font-hand)", fontSize: 21, color: "var(--ink-blue)" }}>{title}</span>
@@ -116,9 +121,9 @@ export default function StoryDetail({
 
         {/* 故事原文(信纸手法) */}
         <div
+          className="card-frame"
           style={{
             marginTop: 16,
-            background: "var(--raised)",
             borderRadius: "var(--r-panel)",
             padding: "18px 16px",
             boxShadow: "var(--lift-1)",
@@ -132,9 +137,19 @@ export default function StoryDetail({
           )}
         </div>
 
-        {/* 留言区 */}
-        <div style={{ marginTop: 22 }}>
-          <span className="meta-italic" style={{ fontSize: 13 }}>留言 · {comments.length}</span>
+        {/* 留言区:与上半区用一条虚线车缝浅浅分开(不上颜色,同首页布带的车缝语言) */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg aria-hidden viewBox="0 0 340 8" preserveAspectRatio="none" style={{ position: "absolute", left: 0, width: "100%", height: 8 }}>
+              <path d="M0 4 H340" stroke="var(--ink-blue)" strokeOpacity="0.35" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" fill="none" />
+            </svg>
+            <span
+              className="meta-italic"
+              style={{ position: "relative", fontSize: 13, background: "var(--ground)", padding: "0 10px" }}
+            >
+              留言 · {comments.length}
+            </span>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
             {comments.length === 0 && (
               <span className="meta-italic" style={{ fontSize: 12.5, color: "var(--placeholder)" }}>
@@ -172,36 +187,35 @@ export default function StoryDetail({
         </div>
       </div>
 
-      {/* 别人的故事才给留言输入框;自己的历史纯只读 */}
+      {/* 别人的故事:先一个「写留言」按钮,点开才是输入条(与群聊同款 ChatInput);自己的历史纯只读 */}
       {canComment && (
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, flexShrink: 0, paddingTop: 10 }}>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") leaveComment();
-            }}
-            placeholder="留一句话吧…"
-            aria-label="写留言"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: "none",
-              borderBottom: "1px solid var(--line-strong)",
-              background: "transparent",
-              fontSize: 15,
-              padding: "8px 0",
-              color: "var(--ink)",
-            }}
-          />
-          <button
-            onClick={leaveComment}
-            className="btn btn--sky"
-            style={{ minHeight: 38, padding: "0 18px", fontSize: 14 }}
-            disabled={!draft.trim()}
-          >
-            送出
-          </button>
+        <div style={{ flexShrink: 0, paddingTop: 10 }}>
+          {composing ? (
+            <ChatInput
+              value={draft}
+              onChange={setDraft}
+              onSend={leaveComment}
+              placeholder="留一句话吧…"
+              autoFocus
+              ariaLabel="写留言"
+            />
+          ) : (
+            <button
+              onClick={() => setComposing(true)}
+              style={{
+                width: "100%",
+                minHeight: 46,
+                borderRadius: 23,
+                border: "1.5px dashed var(--slot-border)",
+                background: "var(--raised)",
+                fontSize: 14,
+                fontStyle: "italic",
+                color: "var(--faint)",
+              }}
+            >
+              写一句留言…
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -199,7 +199,7 @@ export function NewStorySlot({ style, onClick }: { style?: React.CSSProperties; 
   return (
     <button
       onClick={onClick}
-      aria-label="New story"
+      aria-label="新故事"
       style={{
         width: VARIANTS.mid.w,
         height: VARIANTS.mid.h,
@@ -241,7 +241,7 @@ export function NewStorySlot({ style, onClick }: { style?: React.CSSProperties; 
         </span>
       </span>
       <span style={{ position: "absolute", right: 18, bottom: 10, fontSize: 12.5, fontStyle: "italic", color: "var(--muted)" }}>
-        New story
+        新故事
       </span>
     </button>
   );

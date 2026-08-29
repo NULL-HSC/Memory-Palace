@@ -31,29 +31,60 @@ function fan(d: number) {
   };
 }
 
+/* 每张小卡头顶一枚夹子,不同颜色轮换;夹在卡内,随卡一起移动(2026-08-29 产品口径,推翻"钉墙"版) */
+const CLIP_COLORS = ["rgba(47,159,200,0.55)", "rgba(255,216,106,0.7)", "rgba(23,106,145,0.5)", "rgba(142,212,232,0.85)"];
+
+function CardClip({ color, x = 115 }: { color: string; x?: number }) {
+  return (
+    <svg
+      aria-hidden
+      width="26"
+      height="330"
+      viewBox="0 0 26 330"
+      style={{ position: "absolute", left: x - 13, top: -304, zIndex: 2, pointerEvents: "none" }}
+    >
+      {/* 挂绳:一路向上延伸(与定墙夹同款比例) */}
+      <line x1="13" y1="0" x2="13" y2="307" stroke={color} strokeWidth="1.8" />
+      {/* 金属提手三角 */}
+      <path d="M13 305 L5.5 321 L20.5 321 Z" fill="none" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
+      {/* 夹子主体:咬住卡片上沿 */}
+      <rect x="4" y="319" width="18" height="17" rx="4.5" fill={color} />
+      {/* 夹身凹槽 */}
+      <rect x="9" y="325" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
+    </svg>
+  );
+}
+
 export default function F1Home({
   onOpenStory,
   onNewStory,
   onVisitSpaces,
   onOpenProfile,
+  generating = null,
+  onOpenGenerating,
   enterClass = "frame-enter-left",
 }: {
   onOpenStory: (storyId: string) => void;
   onNewStory: () => void;
   onVisitSpaces: () => void;
   onOpenProfile: () => void;
+  /** 后台生成中的故事:排在已存故事后、空白「+」卡前;生成中 = 格纹卡,好了 = 带「未读」标 */
+  generating?: { ready: boolean; unread: boolean } | null;
+  onOpenGenerating?: () => void;
   enterClass?: string;
 }) {
   const { stories } = useStore();
   const [front, setFront] = useState(0); // 只在吸附/点按时变化 → 标题联动
-  const story = stories[front];
-  const maxOffset = stories.length; // 边界含末尾的空白「+」卡:它可以被滑到最前并点按
+  const genIdx = generating ? stories.length : -1; // 生成卡在卡扇里的位置(若有)
+  const story = front < stories.length ? stories[front] : undefined;
+  const maxOffset = stories.length + (generating ? 1 : 0); // 边界含末尾的空白「+」卡:它可以被滑到最前并点按
 
   const offsetRef = useRef(0);
   const dragRef = useRef({ startX: 0, startOffset: 0, moved: 0, active: false, tapIdx: null as number | null });
   const rafRef = useRef(0);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const blankRef = useRef<HTMLButtonElement>(null);
+  const genRef = useRef<HTMLDivElement>(null);
 
   /* 直接写 DOM：滑动帧不经过 React */
   const applyFan = (off: number, animate: boolean) => {
@@ -69,12 +100,21 @@ export default function F1Home({
     });
     const blank = blankRef.current;
     if (blank) {
-      const t = fan(stories.length - off);
+      const t = fan(stories.length + (generating ? 1 : 0) - off);
       blank.style.transition = animate ? FAN_TRANSITION : "none";
       blank.style.transform = t.transform;
       blank.style.opacity = String(t.opacity);
       blank.style.zIndex = String(t.zIndex);
       blank.style.visibility = t.visible ? "visible" : "hidden";
+    }
+    const gen = genRef.current;
+    if (gen && generating) {
+      const t = fan(stories.length - off);
+      gen.style.transition = animate ? FAN_TRANSITION : "none";
+      gen.style.transform = t.transform;
+      gen.style.opacity = String(t.opacity);
+      gen.style.zIndex = String(t.zIndex);
+      gen.style.visibility = t.visible ? "visible" : "hidden";
     }
   };
 
@@ -129,6 +169,7 @@ export default function F1Home({
   const handleCardTap = (idx: number) => {
     if (dragRef.current.moved > 8) return; // 拖拽后的抬手不算点按
     if (idx === front && story) onOpenStory(story.id);
+    else if (idx === front && idx === genIdx && generating?.ready) onOpenGenerating?.();
     else snapTo(idx);
   };
 
@@ -139,23 +180,23 @@ export default function F1Home({
         aria-hidden
         viewBox="0 0 390 170"
         preserveAspectRatio="none"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 170, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 170", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
       >
         <defs>
           <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#EAF6FB" />
-            <stop offset="72%" stopColor="var(--mist)" />
-            <stop offset="100%" stopColor="var(--sky)" />
+            <stop offset="0%" stopColor="var(--mist)" />
+            <stop offset="100%" stopColor="#B8E2F0" />
           </linearGradient>
         </defs>
-        {/* 不规则波浪下沿:布面加厚(波形整体上移 30px),每个波的宽度/深度都不一样 */}
+        {/* 平滑三浪 + 圆角端头(参考美术图):平缓大波浪,虚线车缝保留矢量 */}
         <path
-          d="M0 0 H390 V106 Q370 132 348 114 Q326 96 306 110 Q286 126 262 108 Q238 90 216 106 Q194 122 168 104 Q142 86 118 104 Q94 122 70 106 Q46 90 22 108 Q10 120 0 106 Z"
+          d="M0 34 Q0 0 34 0 H356 Q390 0 390 34 V104 Q364 148 338 148 T286 104 Q260 148 234 148 T182 104 Q156 148 130 148 T78 104 Q52 148 26 148 T0 118 Z"
           fill="url(#bandG)"
         />
-        {/* 虚线车缝:沿同一条不规则波浪,上移 8px */}
+        {/* 虚线车缝:沿同一条波浪,上移 10px */}
         <path
-          d="M390 98 Q370 124 348 106 Q326 88 306 102 Q286 118 262 100 Q238 82 216 98 Q194 114 168 96 Q142 78 118 96 Q94 114 70 98 Q46 82 22 100 Q10 112 0 98"
+          d="M0 24 Q0 -10 34 -10 H356 Q390 -10 390 24 V94 Q364 138 338 138 T286 94 Q260 138 234 138 T182 94 Q156 138 130 138 T78 94 Q52 138 26 138 T0 108"
+          transform="translate(0, 10)"
           fill="none"
           stroke="var(--ink-blue)"
           strokeOpacity="0.4"
@@ -166,7 +207,7 @@ export default function F1Home({
       </svg>
 
       {/* header:进横条;只留 Visit 入口(实心按钮) */}
-      <div style={{ position: "relative", zIndex: 103, display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "30px var(--screen-x) 0" }}>
+      <div style={{ position: "relative", zIndex: 103, display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "22px var(--screen-x) 0" }}>
         <button
           onClick={onVisitSpaces}
           className="btn btn--sky"
@@ -194,7 +235,7 @@ export default function F1Home({
             pointerEvents: "none",
           }}
         />
-        {stories.length === 0 ? (
+        {stories.length === 0 && !generating ? (
           /* 空态:格子布纹内芯的拍立得槽 + 奶油黄大圆 +(示意图手法) */
           <button
             onClick={onNewStory}
@@ -268,6 +309,10 @@ export default function F1Home({
                   willChange: "transform",
                 }}
               >
+                {/* 每张卡自己的夹子(颜色轮换),在卡内 → 随卡一起移动 */}
+                {[72, 158].map((x) => (
+                  <CardClip key={x} x={x} color={CLIP_COLORS[i % CLIP_COLORS.length]} />
+                ))}
                 <div
                   className={i === front ? "anim-float" : undefined}
                   style={i === front ? { filter: "drop-shadow(0 6px 12px rgba(15,45,66,0.10))" } : undefined}
@@ -278,6 +323,80 @@ export default function F1Home({
             );
           })
         )}
+        {/* ══ 后台生成中的故事卡:生成中=格纹+「生成中…」;好了=拍立得+「未读」标 ══ */}
+        {generating && (
+          <div
+            ref={genRef}
+            data-card-idx={genIdx}
+            onClick={() => handleCardTap(genIdx)}
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "42%",
+              ...(() => {
+                const t = fan(stories.length - offsetRef.current);
+                return { transform: t.transform, opacity: t.opacity, zIndex: t.zIndex, visibility: t.visible ? ("visible" as const) : ("hidden" as const) };
+              })(),
+              cursor: generating.ready ? "pointer" : "default",
+            }}
+          >
+            {generating.ready ? (
+              <div style={{ position: "relative" }}>
+                <MountedPrint variant="focused" cover="/covers/courage.png" caption="新的故事" />
+                {generating.unread && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -6,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      background: "var(--coral)",
+                      boxShadow: "var(--lift-1)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--cream)",
+                      zIndex: 3,
+                    }}
+                  >
+                    未读
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div style={{ position: "relative" }}>
+                <BlankMount />
+                <span
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: "block",
+                        width: 5,
+                        height: 5,
+                        borderRadius: "50%",
+                        background: "var(--story)",
+                        animation: `think 1.6s ease-in-out ${i * 0.22}s infinite`,
+                      }}
+                    />
+                  ))}
+                  <span className="meta-italic" style={{ fontSize: 12.5 }}>生成中…</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {stories.length > 0 && (
           <button
             ref={blankRef}
@@ -296,6 +415,9 @@ export default function F1Home({
               })(),
             }}
           >
+            {[72, 158].map((x) => (
+              <CardClip key={x} x={x} color={CLIP_COLORS[stories.length % CLIP_COLORS.length]} />
+            ))}
             <BlankMount />
             <span
               aria-hidden
@@ -337,30 +459,6 @@ export default function F1Home({
           </button>
         )}
 
-        {/* ══ 固定在墙上的挂绳夹子:不随卡片移动;挂绳一路连到顶部波浪布带底下;图层在卡片之上 ══ */}
-        {stories.length > 0 && (
-          <>
-            {[-50, 50].map((dx) => (
-              <svg
-                key={dx}
-                aria-hidden
-                width="26"
-                height="150"
-                viewBox="0 0 26 150"
-                style={{ position: "absolute", left: `calc(50% + ${dx}px - 13px)`, top: "calc(42% - 320px)", zIndex: 101, pointerEvents: "none" }}
-              >
-                {/* 挂绳:从布带底下一路垂到夹子 */}
-                <line x1="13" y1="0" x2="13" y2="117" stroke="var(--story)" strokeWidth="1.8" />
-                {/* 金属提手三角 */}
-                <path d="M13 115 L5.5 131 L20.5 131 Z" fill="none" stroke="var(--story)" strokeWidth="2.2" strokeLinejoin="round" />
-                {/* 夹子主体:咬住卡片上沿 */}
-                <rect x="4" y="129" width="18" height="17" rx="4.5" fill="var(--story)" />
-                {/* 夹身凹槽 */}
-                <rect x="9" y="135" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
-              </svg>
-            ))}
-          </>
-        )}
       </div>
 
       {/* ══ 底部:平地地板(比背景深一档的色块)—— 拍立得像挂在墙上,companion 站在地上 ══ */}

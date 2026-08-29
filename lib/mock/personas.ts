@@ -7,20 +7,20 @@ import type { Persona } from "../types";
 export const MOCK_PERSONAS: Persona[] = [
   {
     id: "per-me",
-    name: "Me, the one who held it",
-    profile: "That's you — the narrator. Carried a too-full cup of tea all day, carefully.",
-    avatar: "/avatars/avatar.png",
+    name: "我,憋了一整天的那个",
+    profile: "就是你自己——端着一杯太满的茶,小心走了一天的人。",
+    avatar: "/avatars/av-cat.png",
   },
   {
     id: "per-coworker",
-    name: "The coworker",
-    profile: "Was in today's conversation too — and never knew about the gap.",
-    avatar: "/avatars/av-bunny.png",
+    name: "那个同事",
+    profile: "也在今天那场对话里,却从不知道你一直在等一个开口的空隙。",
+    avatar: "/avatars/av-glasses.png",
   },
   {
     id: "per-sky",
-    name: "The sky on the walk home",
-    profile: "A very gentle first listener. Already heard it once, orange and all.",
-    avatar: "/avatars/av-duck.png",
+    name: "回家路上的那片天",
+    profile: "最温柔的第一个听众。橘色的傍晚里,已经听过一次了。",
+    avatar: "/avatars/av-bunny.png",
   },
 ];
