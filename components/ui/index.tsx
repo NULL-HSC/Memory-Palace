@@ -170,12 +170,26 @@ export function BlankMount({ style }: { style?: React.CSSProperties }) {
       <span
         className="gingham"
         style={{
+          position: "relative",
           display: "block",
           width: "100%",
           height: "100%",
+          overflow: "hidden",
           borderRadius: 6,
         }}
-      />
+      >
+        {/* 内框内阴影:与其他拍立得对齐 */}
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: 6,
+            boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)",
+            pointerEvents: "none",
+          }}
+        />
+      </span>
     </div>
   );
 }

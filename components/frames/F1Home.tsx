@@ -143,7 +143,8 @@ export default function F1Home({
       >
         <defs>
           <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--mist)" />
+            <stop offset="0%" stopColor="#EAF6FB" />
+            <stop offset="72%" stopColor="var(--mist)" />
             <stop offset="100%" stopColor="var(--sky)" />
           </linearGradient>
         </defs>
@@ -300,6 +301,22 @@ export default function F1Home({
               aria-hidden
               style={{
                 position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 8,
+                textAlign: "center",
+                fontFamily: "var(--font-hand)",
+                fontSize: 21,
+                fontWeight: 600,
+                color: "var(--ink-blue)",
+              }}
+            >
+              新沙盘
+            </span>
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
                 left: "50%",
                 top: "50%",
                 transform: "translate(-50%, -50%)",
@@ -349,10 +366,14 @@ export default function F1Home({
       {/* ══ 底部:平地地板(比背景深一档的色块)—— 拍立得像挂在墙上,companion 站在地上 ══ */}
       <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 88, background: "#F1E5CB", pointerEvents: "none" }} />
 
-      {/* Create:奶油黄圆 + 号(示意图 CTA) */}
+      {/* Create:奶油黄圆 + 号(示意图 CTA);空态不显示(空槽即入口) */}
+      {stories.length > 0 && (
       <div style={{ position: "absolute", left: "24%", bottom: "max(26px, env(safe-area-inset-bottom))", zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <button
-          onClick={onNewStory}
+          onClick={() => {
+            if (stories.length > 0) snapTo(stories.length); // 滑到末尾「+」卡当转场
+            onNewStory();
+          }}
           aria-label="创建新沙盘"
           style={{
             display: "flex",
@@ -372,6 +393,7 @@ export default function F1Home({
         </button>
         <span style={{ fontFamily: "var(--font-hand)", fontSize: 16, color: "var(--ink-blue)" }}>新沙盘</span>
       </div>
+      )}
 
       {/* companion:脚踩地板,站在右下角;点击进个人资料(数字人资料/安全设置) */}
       <button
