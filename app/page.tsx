@@ -14,6 +14,7 @@ import Auth from "@/components/frames/Auth";
 import Profile from "@/components/frames/Profile";
 import StoryDetail from "@/components/frames/StoryDetail";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
+import { CurtainVeil } from "@/components/scene/Curtain";
 import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/community";
 import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
@@ -43,6 +44,8 @@ function Shell() {
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
   /** storyDetail 的数据来源:自己的历史(store)/ 社区故事(mock) */
   const [detailSource, setDetailSource] = useState<"mine" | "community">("mine");
+  /** 幕布拉开转场:等候室就绪 → 进场那一刻挂起,动画结束自卸 */
+  const [curtain, setCurtain] = useState(false);
 
   /* 启动:无 token → auth 帧;已登录 → home。
      调试/演示捷径 ?frame=listening|pick|draft|sandplay|spaces 优先于登录态,直达任意帧 */
@@ -110,6 +113,7 @@ function Shell() {
           : current
       );
     }
+    setCurtain(true); // 舞台幕布向两侧拉开,露出幕后的角色阵容
     setFrame("pick");
   };
 
@@ -230,6 +234,9 @@ function Shell() {
           }}
         />
       )}
+
+      {/* 幕布拉开转场:挂在所有帧之上,就绪进场那一刻把选角页「亮出来」 */}
+      {curtain && <CurtainVeil onDone={() => setCurtain(false)} />}
       {frame === "profile" && <Profile onBack={backHome} onLogout={handleLogout} />}
       {frame === "storyDetail" &&
         (detailSource === "community" ? (

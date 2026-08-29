@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { prepareSandplay, runGodfather, type PreparedSandplay } from "@/lib/api";
 import { Companion } from "../characters";
 import { TypeText } from "../ui";
+import { ClosedCurtainBackdrop } from "../scene/Curtain";
 
 /**
  * 阶段一 · 旁观者陪聊(docs/product-flow.md「两个阶段」)
@@ -184,18 +185,22 @@ export default function Reflect({
     <div className="frame frame-enter">
       {/* nav */}
       <div className="nav-bar">
-        <button className="nav-side back-chevron" onClick={onBack} aria-label="Back">
+        <button className="nav-side back-chevron" onClick={onBack} aria-label="返回">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="nav-title">Before the scene</span>
+        <span className="nav-title">等候室</span>
         <span className="nav-side" />
       </div>
 
-      {/* 陪聊的人 —— 站在故事外,所以是 companion 而不是故事人设头像 */}
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 18, flexShrink: 0 }}>
-        <Companion size={92} className="anim-bob" />
+      {/* 等候室 = 舞台口:背后是一直闭着的舞台幕布 + 台前光,companion 站在幕前陪你等。
+          强调「幕布还没拉开」;解构/VLM 就绪后由 page.tsx 的 CurtainVeil 做幕布拉开转场 */}
+      <div style={{ position: "relative", marginTop: 18, flexShrink: 0, height: 170 }}>
+        <ClosedCurtainBackdrop height={132} />
+        <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
+          <Companion size={92} className="anim-bob" />
+        </div>
       </div>
 
       {/* 对话区 */}
@@ -226,7 +231,7 @@ export default function Reflect({
         {/* 准备失败:这条路走不下去,给真实原因 + 重试 */}
         {prepError && (
           <div style={{ textAlign: "center", padding: "18px 0" }}>
-            <div className="meta-italic" style={{ fontSize: 13.5 }}>Couldn&rsquo;t set the scene just now.</div>
+            <div className="meta-italic" style={{ fontSize: 13.5 }}>这会儿没能把景搭起来。</div>
             <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
               {prepError}
             </div>
@@ -258,7 +263,7 @@ export default function Reflect({
                 color: "var(--ink)",
               }}
             >
-              Try again
+              再试一次
             </button>
           </div>
         )}
@@ -266,7 +271,7 @@ export default function Reflect({
         {/* 陪聊挂了但准备没挂:不解释技术细节,只把人放行 */}
         {voiceError && !prepError && (
           <div className="meta-italic" style={{ alignSelf: "center", fontSize: 12.5 }}>
-            quiet for a moment…
+            它这会儿安静一会儿…
           </div>
         )}
       </div>
@@ -275,7 +280,7 @@ export default function Reflect({
       <div style={{ flexShrink: 0, paddingTop: 6 }}>
         {handedOff || (ready && voiceError) ? (
           <button className="btn" onClick={enter} style={{ width: "100%" }}>
-            <span>Step into the scene</span>
+            <span>拉开帷幕,进场</span>
           </button>
         ) : (
           <>
@@ -296,8 +301,8 @@ export default function Reflect({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Say something back…"
-                aria-label="Reply"
+                placeholder="回一句吧…"
+                aria-label="回话"
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -310,7 +315,7 @@ export default function Reflect({
               />
               <button
                 onClick={send}
-                aria-label="Send"
+                aria-label="发送"
                 disabled={!input.trim()}
                 style={{
                   display: "flex",
@@ -330,7 +335,7 @@ export default function Reflect({
               </button>
             </div>
             <div className="meta-italic" style={{ display: "block", textAlign: "center", marginTop: 10 }}>
-              {ready ? "the scene is ready" : "setting the scene…"}
+              {ready ? "布景好了,可以开演" : "幕布后面正在布景…"}
             </div>
           </>
         )}
@@ -401,7 +406,7 @@ function ThinkingDots() {
         borderRadius: "20px 20px 20px 6px",
         background: "var(--sunken)",
       }}
-      aria-label="thinking"
+      aria-label="在想"
     >
       {[0, 1, 2].map((i) => (
         <span
