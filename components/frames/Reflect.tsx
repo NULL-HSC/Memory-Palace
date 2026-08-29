@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { getPlaybackUrl, getSessionStatus, prepareSandplay, type PreparedSandplay } from "@/lib/api";
+import {
+  getOssPlaybackUrl,
+  getSessionStatus,
+  getVideoPlaybackSource,
+  prepareSandplay,
+  type PreparedSandplay,
+} from "@/lib/api";
 import { Companion } from "../characters";
 import HeadMatch, { type ClearInfo } from "../game/HeadMatch";
 import { createQuoteDeck, type MindfulQuote } from "@/lib/mindful-quotes";
@@ -31,7 +37,8 @@ export async function waitForVideoPlayback(sessionId: string): Promise<string> {
     const session = await getSessionStatus(sessionId);
     const status = session.video.status.toLowerCase();
     if (["succeeded", "completed", "ready", "success"].includes(status)) {
-      return getPlaybackUrl(session.video.id);
+      const playbackSource = await getVideoPlaybackSource(session.video.id);
+      return getOssPlaybackUrl(playbackSource.video.object_key);
     }
     if (["failed", "error", "cancelled", "canceled"].includes(status)) {
       throw new Error(session.video.message || session.video.error_code || "视频生成失败");

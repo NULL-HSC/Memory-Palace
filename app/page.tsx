@@ -17,7 +17,17 @@ import StoryDetail from "@/components/frames/StoryDetail";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
 import { CurtainVeil } from "@/components/scene/Curtain";
 import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/community";
-import { USE_BACKEND, hasAccessToken, logout as apiLogout, prepareSandplay, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
+import {
+  USE_BACKEND,
+  hasAccessToken,
+  listSessions,
+  logout as apiLogout,
+  prepareSandplay,
+  sessionSummaryToStory,
+  setAccessToken,
+  updateSessionVisibility,
+  type PreparedSandplay,
+} from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -35,7 +45,7 @@ type Frame = "auth" | "home" | "listening" | "reflect" | "premiere" | "pick" | "
 const DEMO_SKIP_KEY = "lilili.demo.skip";
 
 function Shell() {
-  const { stories, addStory } = useStore();
+  const { stories, addStory, replaceStories } = useStore();
   const [frame, setFrame] = useState<Frame | null>(null); // null = 启动中(等待 token 探测)
   const [transcript, setTranscript] = useState("");
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
@@ -72,6 +82,21 @@ function Shell() {
     const skipped = !USE_BACKEND && localStorage.getItem(DEMO_SKIP_KEY) === "1";
     setFrame(hasAccessToken() || skipped ? "home" : "auth");
   }, []);
+
+  useEffect(() => {
+    if (frame !== "home" || !USE_BACKEND) return;
+    let cancelled = false;
+
+    listSessions()
+      .then((result) => {
+        if (!cancelled) replaceStories(result.items.map(sessionSummaryToStory));
+      })
+      .catch((error) => console.error("[sessions] 获取故事集失败:", error));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frame, replaceStories]);
 
   /* 登录/注册成功(token 已由 api 层写入 localStorage)→ home */
   const handleAuthed = () => {

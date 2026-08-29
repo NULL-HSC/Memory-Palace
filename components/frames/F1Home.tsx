@@ -34,6 +34,14 @@ function fan(d: number) {
 /* 每张小卡头顶一枚夹子,不同颜色轮换;夹在卡内,随卡一起移动(2026-08-29 产品口径,推翻"钉墙"版) */
 const CLIP_COLORS = ["rgba(47,159,200,0.55)", "rgba(255,216,106,0.7)", "rgba(23,106,145,0.5)", "rgba(142,212,232,0.85)"];
 
+function videoStatusLabel(status?: string): string | null {
+  if (!status) return null;
+  const normalized = status.toLowerCase();
+  if (["succeeded", "completed", "ready", "success", "done"].includes(normalized)) return "视频已就绪";
+  if (["failed", "error", "cancelled", "canceled"].includes(normalized)) return "视频生成失败";
+  return "视频生成中";
+}
+
 function CardClip({ color, x = 115 }: { color: string; x?: number }) {
   return (
     <svg
@@ -289,6 +297,7 @@ export default function F1Home({
         ) : (
           stories.map((s, i) => {
             const t = fan(i - offsetRef.current);
+            const videoStatus = videoStatusLabel(s.backendVideoStatus);
             return (
               <div
                 key={s.id}
@@ -318,6 +327,27 @@ export default function F1Home({
                   style={i === front ? { filter: "drop-shadow(0 6px 12px rgba(15,45,66,0.10))" } : undefined}
                 >
                   <MountedPrint variant="focused" cover={s.cover} caption={s.title} date={s.date} />
+                  {videoStatus && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        maxWidth: 94,
+                        padding: "3px 7px",
+                        borderRadius: 999,
+                        background: "rgba(255, 249, 238, 0.9)",
+                        boxShadow: "0 1px 4px rgba(15,45,66,0.16)",
+                        color: "var(--ink-blue)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        lineHeight: 1.2,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {videoStatus}
+                    </span>
+                  )}
                 </div>
               </div>
             );

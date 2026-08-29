@@ -30,6 +30,7 @@ export default function F2Listening({
   const [typed, setTyped] = useState("");
   const [settling, setSettling] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -46,6 +47,7 @@ export default function F2Listening({
   useEffect(() => {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
       recorderRef.current?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
@@ -125,9 +127,8 @@ export default function F2Listening({
     return stopped;
   };
 
-  /* 语音/打字是同一份文本:typed 是主缓冲,words 只是「最近一段语音」的临时区。
-     切进打字时把语音词合并进文本框,从此都在 textarea 里编辑,不会再“覆盖成空白” */
-  const mergedText = [typed, words.join(" ")].map((s) => s.trim()).filter(Boolean).join(" ");
+  // Transcription and keyboard input share the same editable text buffer.
+  const mergedText = typed.trim();
 
   /* 点文字区 → 打字:停录;语音词并入 typed;光标落在点按的那个字上(caretRangeFromPoint 量偏移) */
   const startTyping = (e: React.MouseEvent) => {
@@ -142,10 +143,6 @@ export default function F2Listening({
       pendingCaretRef.current = Math.min(r.toString().length, mergedText.length);
     } else {
       pendingCaretRef.current = null; // 点在文字外 → 光标落文末
-    }
-    if (words.length > 0) {
-      setTyped(mergedText);
-      setWords([]);
     }
     setTypeMode(true);
   };
@@ -284,14 +281,8 @@ export default function F2Listening({
           style={{ marginTop: 12, flex: 1, minHeight: 0, overflowY: "auto", cursor: "text" }}
         >
           <p ref={pRef} style={{ margin: 0, minHeight: "100%", fontSize: 21, fontWeight: 300, lineHeight: `${RULE}px`, backgroundImage: LETTER_LINES, backgroundAttachment: "local" }}>
-            {/* 已打好的字和刚说的词同屏显示;点哪里,光标就落在哪个字上 */}
-            {typed && <span className="word-final">{typed} </span>}
-            {words.map((w, i) => (
-              <span key={i} className={i >= words.length - 3 && streaming ? "word-partial" : "word-final"}>
-                {w}{" "}
-              </span>
-            ))}
-            {words.length === 0 && started && !typed && <span className="word-partial">…</span>}
+            {typed && <span className="word-final">{typed}</span>}
+            {!typed && started && <span className={streaming ? "word-partial" : "word-final"}>…</span>}
           </p>
         </div>
       )}

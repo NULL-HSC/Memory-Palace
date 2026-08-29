@@ -19,6 +19,7 @@ interface StoreShape {
   user: UserState;
   hydrated: boolean;
   addStory: (s: Omit<Story, "id" | "createdAt">) => Story;
+  replaceStories: (stories: Story[]) => void;
 }
 
 const StoreCtx = createContext<StoreShape | null>(null);
@@ -62,9 +63,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return story;
   }, []);
 
+  const replaceStories = useCallback<StoreShape["replaceStories"]>((nextStories) => {
+    setStories(nextStories);
+  }, []);
+
   const value = useMemo(
-    () => ({ stories, user, hydrated, addStory }),
-    [stories, user, hydrated, addStory]
+    () => ({ stories, user, hydrated, addStory, replaceStories }),
+    [stories, user, hydrated, addStory, replaceStories]
   );
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

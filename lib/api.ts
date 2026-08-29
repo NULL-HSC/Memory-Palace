@@ -43,9 +43,11 @@ export interface AuthResponse {
 
 export interface BackendSessionSummary {
   id: string;
+  title?: string | null;
   final_text_preview: string;
   visibility: string;
   video_status: string;
+  chat_phase?: string;
   created_at: string;
 }
 
@@ -239,6 +241,28 @@ export const createSession = (finalText: string) =>
 
 export const listSessions = (page = 1, limit = 20) =>
   requestEnvelope<PageResult<BackendSessionSummary>>(`/sessions?page=${page}&limit=${limit}`);
+
+const SESSION_COVERS = ["sage", "blush", "lavender"];
+
+export function sessionSummaryToStory(summary: BackendSessionSummary, index: number): Story {
+  const createdAt = Date.parse(summary.created_at);
+  const title = summary.title?.trim() || summary.final_text_preview.trim() || "未命名故事";
+  const date = Number.isNaN(createdAt)
+    ? ""
+    : new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric" }).format(createdAt);
+
+  return {
+    id: `session-${summary.id}`,
+    title,
+    date,
+    cover: SESSION_COVERS[index % SESSION_COVERS.length],
+    transcript: summary.final_text_preview,
+    visibility: summary.visibility === "public" ? "community" : "private",
+    createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
+    backendSessionId: summary.id,
+    backendVideoStatus: summary.video_status,
+  };
+}
 
 export const getSessionStatus = (sessionId: string) =>
   requestEnvelope<SessionStatus>(`/sessions/${encodeURIComponent(sessionId)}`);

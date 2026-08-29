@@ -15,6 +15,7 @@ export interface Story {
   backendSessionId?: string;
   /** 创建会话时后端返回的视频生成任务标识。 */
   backendVideoTaskId?: string;
+  backendVideoStatus?: string;
 }
 
 export interface Character {
