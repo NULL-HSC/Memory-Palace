@@ -288,15 +288,21 @@ export async function getSessionPersonas(sessionId: string): Promise<Persona[]> 
 /** 会话创建后人设是异步产物；按会话状态轻量等待，不轮询 reply-run。 */
 async function waitForPersonas(sessionId: string): Promise<Persona[]> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
+    const status = await getSessionStatus(sessionId);
+    const personaStatus = status.persona_status.toLowerCase();
+    if (["failed", "error", "cancelled", "canceled"].includes(personaStatus)) {
+      throw new ApiError("后端人设提取失败", 502);
+    }
+    const ready = ["succeeded", "success", "completed", "complete", "ready", "done"].includes(personaStatus);
+    if (!ready) {
+      await delay(1500);
+      continue;
+    }
     try {
       const personas = await getSessionPersonas(sessionId);
       if (personas.length > 0) return personas;
     } catch (error) {
       if (error instanceof ApiError && ![404, 409, 425].includes(error.status)) throw error;
-    }
-    const status = await getSessionStatus(sessionId);
-    if (["failed", "error"].includes(status.persona_status.toLowerCase())) {
-      throw new ApiError("后端人设提取失败", 502);
     }
     await delay(1500);
   }
@@ -568,12 +574,30 @@ export async function runGodfather(
 
 /* ── 视频与辅助功能 ── */
 
-export const getPlaybackUrl = async (videoId: string): Promise<string> => {
-  const data = await requestEnvelope<{ playback_url: string }>(
+export interface VideoPlaybackSource {
+  id: string;
+  video: {
+    id: string;
+    status: string;
+    object_key: string;
+  };
+}
+
+/** The business backend returns an OSS object key after the video is ready. */
+export const getVideoPlaybackSource = (videoId: string) =>
+  requestEnvelope<VideoPlaybackSource>(
     `/videos/${encodeURIComponent(videoId)}/playback`
   );
+
+/** The Next.js server turns an OSS object key into a short-lived playback URL. */
+export async function getOssPlaybackUrl(objectKey?: string): Promise<string> {
+  const query = objectKey ? `?object_key=${encodeURIComponent(objectKey)}` : "";
+  const response = await fetch(`/api/oss/playback${query}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Unable to load the OSS playback URL.");
+  const data = (await response.json()) as { playback_url?: string };
+  if (!data.playback_url) throw new Error("The OSS playback URL is missing.");
   return data.playback_url;
-};
+}
 
 /** 新版后端没有 title 接口，标题建议继续使用稳定的本地池。 */
 export async function suggestTitle(transcript: string): Promise<string> {

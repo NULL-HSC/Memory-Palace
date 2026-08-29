@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { Persona } from "@/lib/types";
-import { getPlaybackUrl, getSessionStatus } from "@/lib/api";
+import { getOssPlaybackUrl, getSessionStatus, getVideoPlaybackSource } from "@/lib/api";
 
 /**
  * F4 舞台 v3 —— 竖屏全幅 AIGC video 槽位（直播间形态）
@@ -37,6 +37,11 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
     setPlaybackUrl(null);
     if (!sessionId) {
       const timer = setTimeout(() => setReady(true), MOCK_VIDEO_MS);
+      void getOssPlaybackUrl()
+        .then((url) => {
+          if (alive) setPlaybackUrl(url);
+        })
+        .catch((error) => console.error("[video] Unable to load configured OSS video:", error));
       return () => {
         alive = false;
         clearTimeout(timer);
@@ -49,7 +54,8 @@ export default function SandplayStage({ cast, speakerId, title, sessionId }: Pro
           const session = await getSessionStatus(sessionId);
           const status = session.video.status.toLowerCase();
           if (["succeeded", "completed", "ready", "success"].includes(status)) {
-            const url = await getPlaybackUrl(session.video.id);
+            const playbackSource = await getVideoPlaybackSource(session.video.id);
+            const url = await getOssPlaybackUrl(playbackSource.video.object_key);
             if (alive) setPlaybackUrl(url);
             return;
           }
