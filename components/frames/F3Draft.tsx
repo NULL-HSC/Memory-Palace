@@ -127,14 +127,14 @@ export default function F3Draft({
                   flex: 1,
                   padding: "12px 6px 10px",
                   borderRadius: 16,
-                  border: selected ? "1.5px solid var(--ink-blue)" : "1px solid var(--line)",
-                  background: selected ? "var(--mist)" : "var(--raised)",
-                  boxShadow: selected ? "none" : "var(--shadow-card)",
+                  border: "none",
+                  background: selected ? "var(--butter)" : "var(--raised)",
+                  boxShadow: selected ? "0 3px 0 var(--butter-under)" : "var(--shadow-card)",
                   transition: "all 250ms var(--ease-soft)",
                   textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: 15, fontWeight: 500, color: selected ? "var(--ink-blue)" : "var(--ink)" }}>
+                <div style={{ fontSize: 15, fontWeight: selected ? 700 : 500, color: "var(--ink)" }}>
                   {opt.label}
                 </div>
                 <div style={{ fontSize: 11, fontStyle: "italic", color: "var(--readable)", marginTop: 3 }}>
@@ -146,23 +146,8 @@ export default function F3Draft({
         </div>
       </div>
 
-      {/* 你的原话：转写回顾 */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          marginTop: 20,
-          background: "var(--sunken)",
-          borderRadius: 18,
-          padding: "18px 20px",
-          overflowY: "auto",
-        }}
-      >
-        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--faint)" }}>你的原话</span>
-        <p style={{ margin: "9px 0 0", fontSize: 15.5, fontWeight: 300, lineHeight: 1.65, color: "var(--ink-2)" }}>
-          {transcript}
-        </p>
-      </div>
+      {/* (2026-08-29 产品确认:储存页不再展示「你的原话」转写回顾;transcript 仍随 onKeep 保存) */}
+      <div style={{ flex: 1, minHeight: 0 }} />
 
       {/* Keep —— 零必填，始终可点（理理理.md §6 F3） */}
       <button
