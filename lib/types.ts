@@ -74,6 +74,48 @@ export interface UserState {
   companionId: "pico";
 }
 
+/* ── 社区 / 朋友 / 评论(2026-08-29 新增,前端 mock,后端就绪后换数据源) ── */
+
+/** 故事下的留言 —— 来自看过故事的人(visitor)或朋友(friend) */
+export interface StoryComment {
+  id: string;
+  authorName: string;
+  /** 留言者的陪伴角色;自己的留言为 "user"(用 companion 头像) */
+  authorCharacterId: CharacterId;
+  relation: "friend" | "visitor";
+  text: string;
+  date: string; // 展示用,如 "8月26日" / "刚刚"
+}
+
+/** 社区里的其他用户(角色 = 他们的数字人形象) */
+export interface CommunityMember {
+  id: string;
+  name: string;
+  characterId: Exclude<CharacterId, "user">;
+  bio: string;
+  isFriend: boolean;
+}
+
+/** 别人公开的 Story */
+export interface CommunityStory {
+  id: string;
+  ownerId: string; // CommunityMember.id
+  title: string;
+  date: string;
+  cover: string;
+  excerpt: string; // 信息流里展示的一小段
+  transcript: string;
+  comments: StoryComment[];
+}
+
+/** 个人资料 —— 安全设置 + 数字人生成资料(角色特征/记忆),localStorage 持久化 */
+export interface ProfileData {
+  username: string;
+  phone: string; // 展示时脱敏
+  traits: string[]; // 角色特征
+  memories: string[]; // 记忆条目
+}
+
 /** 后端统一错误格式（hackathon-plan §3.2） */
 export interface ApiEnvelope<T> {
   code: number;

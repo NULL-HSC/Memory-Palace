@@ -10,10 +10,11 @@ import { Companion } from "../characters";
  * - 拖拽丝滑化：滑动期间直接写 DOM transform（rAF 节流，不走 React 渲染），
  *   松手才吸附并提交状态；卡片 will-change: transform
  * - 温馨化：卡片圆角、波浪错位布局、层级重排（标题/CTA 加大）
- * - 交互不变：拖/滑翻牌，点侧卡到最前，点前置卡进沙盘，Create / Pico 开新故事
+ * - 交互不变：拖/滑翻牌，点侧卡到最前；点前置卡看故事详情(只读+留言)
+ * - Create 开新故事；点 companion 进个人资料(数字人资料/安全设置)
  */
 
-const STEP = 96;
+const STEP = 148;
 const FAN_TRANSITION = "transform 380ms cubic-bezier(0.32, 0.72, 0.32, 1), opacity 380ms cubic-bezier(0.32, 0.72, 0.32, 1)";
 
 /** 波浪布局:前置卡最高,两侧按 1−cos(πd) 一高一低交替;
@@ -31,14 +32,16 @@ function fan(d: number) {
 }
 
 export default function F1Home({
-  onOpenSandplay,
+  onOpenStory,
   onNewStory,
   onVisitSpaces,
+  onOpenProfile,
   enterClass = "frame-enter-left",
 }: {
-  onOpenSandplay: (storyId: string) => void;
+  onOpenStory: (storyId: string) => void;
   onNewStory: () => void;
   onVisitSpaces: () => void;
+  onOpenProfile: () => void;
   enterClass?: string;
 }) {
   const { stories } = useStore();
@@ -50,7 +53,7 @@ export default function F1Home({
   const dragRef = useRef({ startX: 0, startOffset: 0, moved: 0, active: false, tapIdx: null as number | null });
   const rafRef = useRef(0);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
-  const blankRef = useRef<HTMLDivElement>(null);
+  const blankRef = useRef<HTMLButtonElement>(null);
 
   /* 直接写 DOM：滑动帧不经过 React */
   const applyFan = (off: number, animate: boolean) => {
@@ -125,23 +128,45 @@ export default function F1Home({
 
   const handleCardTap = (idx: number) => {
     if (dragRef.current.moved > 8) return; // 拖拽后的抬手不算点按
-    if (idx === front && story) onOpenSandplay(story.id);
+    if (idx === front && story) onOpenStory(story.id);
     else snapTo(idx);
   };
 
   return (
     <div className={`frame ${enterClass}`} style={{ padding: 0, overflow: "hidden" }}>
-      {/* ══ 顶部:雾蓝扇贝波浪布带(拉高,标题/入口都放进来)+ 虚线车缝 ══ */}
-      <svg aria-hidden viewBox="0 0 390 120" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 120, pointerEvents: "none" }}>
-        <path d="M0 0 H390 V52 Q365.6 76 341.25 52 Q316.9 76 292.5 52 Q268.1 76 243.75 52 Q219.4 76 195 52 Q170.6 76 146.25 52 Q121.9 76 97.5 52 Q73.1 76 48.75 52 Q24.4 76 0 52 Z" fill="var(--mist)" />
-        <path d="M390 44 Q365.6 68 341.25 44 Q316.9 68 292.5 44 Q268.1 68 243.75 44 Q219.4 68 195 44 Q170.6 68 146.25 44 Q121.9 68 97.5 44 Q73.1 68 48.75 44 Q24.4 68 0 44" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+      {/* ══ 顶部:雾蓝波浪布带(2.5D 渐变:上浅蓝→波浪沿深蓝;不规则波;轻微外投影) ══ */}
+      <svg
+        aria-hidden
+        viewBox="0 0 390 120"
+        preserveAspectRatio="none"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 120, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
+      >
+        <defs>
+          <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--mist)" />
+            <stop offset="55%" stopColor="var(--mist)" />
+            <stop offset="100%" stopColor="var(--sky)" />
+          </linearGradient>
+        </defs>
+        {/* 不规则波浪下沿:每个波的宽度/深度都不一样,像布帘自然垂坠 */}
+        <path
+          d="M0 0 H390 V46 Q370 72 348 54 Q326 36 306 50 Q286 66 262 48 Q238 30 216 46 Q194 62 168 44 Q142 26 118 44 Q94 62 70 46 Q46 30 22 48 Q10 60 0 46 Z"
+          fill="url(#bandG)"
+        />
+        {/* 虚线车缝:沿同一条不规则波浪,上移 8px */}
+        <path
+          d="M390 38 Q370 64 348 46 Q326 28 306 42 Q286 58 262 40 Q238 22 216 38 Q194 54 168 36 Q142 18 118 36 Q94 54 70 38 Q46 22 22 40 Q10 52 0 38"
+          fill="none"
+          stroke="var(--ink-blue)"
+          strokeOpacity="0.4"
+          strokeWidth="1.3"
+          strokeDasharray="5 6"
+          strokeLinecap="round"
+        />
       </svg>
 
-      {/* header:进横条;标题轻量近乎融入背景,Visit 入口加重为实心按钮 */}
-      <div style={{ position: "relative", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "22px var(--screen-x) 0" }}>
-        <span style={{ fontFamily: "var(--font-hand)", fontSize: 20, color: "var(--ink-blue)", opacity: 0.72 }}>
-          我的故事 · {stories.length}
-        </span>
+      {/* header:进横条;只留 Visit 入口(实心按钮) */}
+      <div style={{ position: "relative", zIndex: 103, display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "22px var(--screen-x) 0" }}>
         <button
           onClick={onVisitSpaces}
           className="btn btn--sky"
@@ -184,7 +209,7 @@ export default function F1Home({
               border: "none",
               borderRadius: 12,
               padding: "10px 10px 34px",
-              boxShadow: "0 6px 16px rgba(23,106,145,0.10)",
+              boxShadow: "0 6px 16px rgba(15,45,66,0.10)",
             }}
           >
             <span
@@ -208,7 +233,7 @@ export default function F1Home({
                   height: 64,
                   borderRadius: "50%",
                   background: "var(--butter)",
-                  boxShadow: "0 6px 14px rgba(23,106,145,0.18)",
+                  boxShadow: "0 6px 14px rgba(15,45,66,0.18)",
                 }}
               >
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
@@ -243,33 +268,9 @@ export default function F1Home({
                   willChange: "transform",
                 }}
               >
-                {/* 前置卡:挂绳小夹子(按签署稿:绳 → 金属提手三角 → 蓝色夹身咬住卡沿)+ 缓慢浮动 + 更深投影 */}
-                {i === front && (
-                  <>
-                    {[72, 158].map((x) => (
-                      <svg
-                        key={x}
-                        aria-hidden
-                        width="26"
-                        height="46"
-                        viewBox="0 0 26 46"
-                        style={{ position: "absolute", left: x - 13, top: -38, zIndex: 2, pointerEvents: "none" }}
-                      >
-                        {/* 挂绳 */}
-                        <line x1="13" y1="0" x2="13" y2="13" stroke="var(--story)" strokeWidth="1.8" />
-                        {/* 金属提手三角 */}
-                        <path d="M13 11 L5.5 27 L20.5 27 Z" fill="none" stroke="var(--story)" strokeWidth="2.2" strokeLinejoin="round" />
-                        {/* 夹子主体:咬住卡片上沿 */}
-                        <rect x="4" y="25" width="18" height="17" rx="4.5" fill="var(--story)" />
-                        {/* 夹身凹槽 */}
-                        <rect x="9" y="31" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
-                      </svg>
-                    ))}
-                  </>
-                )}
                 <div
                   className={i === front ? "anim-float" : undefined}
-                  style={i === front ? { filter: "drop-shadow(0 20px 34px rgba(23,106,145,0.10))" } : undefined}
+                  style={i === front ? { filter: "drop-shadow(0 6px 12px rgba(15,45,66,0.10))" } : undefined}
                 >
                   <MountedPrint variant="focused" cover={s.cover} caption={s.title} date={s.date} />
                 </div>
@@ -278,9 +279,13 @@ export default function F1Home({
           })
         )}
         {stories.length > 0 && (
-          <div
+          <button
             ref={blankRef}
-            aria-hidden
+            aria-label="创建新沙盘"
+            onClick={() => {
+              if (dragRef.current.moved > 8) return; // 拖拽后的抬手不算点按
+              onNewStory();
+            }}
             style={{
               position: "absolute",
               left: "50%",
@@ -292,18 +297,61 @@ export default function F1Home({
             }}
           >
             <BlankMount />
-          </div>
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 52,
+                height: 52,
+                borderRadius: "50%",
+                background: "var(--butter)",
+                boxShadow: "0 3px 0 var(--butter-under)",
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+          </button>
+        )}
+
+        {/* ══ 固定在墙上的挂绳夹子:不随卡片移动;挂绳一路连到顶部波浪布带底下;图层在卡片之上 ══ */}
+        {stories.length > 0 && (
+          <>
+            {[-50, 50].map((dx) => (
+              <svg
+                key={dx}
+                aria-hidden
+                width="26"
+                height="150"
+                viewBox="0 0 26 150"
+                style={{ position: "absolute", left: `calc(50% + ${dx}px - 13px)`, top: "calc(38% - 320px)", zIndex: 101, pointerEvents: "none" }}
+              >
+                {/* 挂绳:从布带底下一路垂到夹子 */}
+                <line x1="13" y1="0" x2="13" y2="117" stroke="var(--story)" strokeWidth="1.8" />
+                {/* 金属提手三角 */}
+                <path d="M13 115 L5.5 131 L20.5 131 Z" fill="none" stroke="var(--story)" strokeWidth="2.2" strokeLinejoin="round" />
+                {/* 夹子主体:咬住卡片上沿 */}
+                <rect x="4" y="129" width="18" height="17" rx="4.5" fill="var(--story)" />
+                {/* 夹身凹槽 */}
+                <rect x="9" y="135" width="8" height="3.2" rx="1.6" fill="var(--cream)" opacity="0.85" />
+              </svg>
+            ))}
+          </>
         )}
       </div>
 
-      {/* ══ 底部:波浪地面(示意图)—— companion 脚踩地面,Create 是奶油黄大圆 + ══ */}
-      <svg aria-hidden viewBox="0 0 390 96" preserveAspectRatio="none" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 96, pointerEvents: "none" }}>
-        <path d="M0 96 V44 Q48 24 97 40 T195 38 T293 42 T390 34 V96 Z" fill="var(--mist)" />
-        <path d="M0 53 Q48 33 97 49 T195 47 T293 51 T390 43" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.85" strokeWidth="1.4" strokeDasharray="5 6" strokeLinecap="round" />
-      </svg>
+      {/* ══ 底部:平地地板(比背景深一档的色块)—— 拍立得像挂在墙上,companion 站在地上 ══ */}
+      <div aria-hidden style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 88, background: "#F1E5CB", pointerEvents: "none" }} />
 
       {/* Create:奶油黄圆 + 号(示意图 CTA) */}
-      <div style={{ position: "absolute", left: "var(--screen-x)", bottom: "max(26px, env(safe-area-inset-bottom))", zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <div style={{ position: "absolute", left: "24%", bottom: "max(26px, env(safe-area-inset-bottom))", zIndex: 110, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
         <button
           onClick={onNewStory}
           aria-label="创建新沙盘"
@@ -323,14 +371,14 @@ export default function F1Home({
             <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
-        <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--readable)" }}>新沙盘</span>
+        <span style={{ fontFamily: "var(--font-hand)", fontSize: 16, color: "var(--ink-blue)" }}>新沙盘</span>
       </div>
 
-      {/* companion:脚踩波浪地面,站在右下角 */}
+      {/* companion:脚踩地板,站在右下角;点击进个人资料(数字人资料/安全设置) */}
       <button
-        onClick={onNewStory}
-        aria-label="和小伙伴聊聊"
-        style={{ position: "absolute", right: 8, bottom: 16, lineHeight: 0, zIndex: 120 }}
+        onClick={onOpenProfile}
+        aria-label="我的资料"
+        style={{ position: "absolute", right: 8, bottom: 12, lineHeight: 0, zIndex: 120 }}
       >
         <span
           aria-hidden
@@ -339,14 +387,14 @@ export default function F1Home({
             left: "50%",
             bottom: 0,
             transform: "translateX(-50%)",
-            width: 116,
-            height: 20,
+            width: 150,
+            height: 24,
             borderRadius: "50%",
-            background: "rgba(23,106,145,0.12)",
+            background: "rgba(15,45,66,0.12)",
             filter: "blur(4px)",
           }}
         />
-        <Companion size={138} className="anim-bob" />
+        <Companion size={172} className="anim-bob" />
       </button>
     </div>
   );

@@ -1,84 +1,250 @@
 "use client";
 
 import React, { useState } from "react";
-import { CHARACTERS } from "@/lib/mock/characters";
-import { CharacterFace, type FaceId } from "../characters";
-import { Toast } from "../ui";
+import { COMMUNITY_MEMBERS, COMMUNITY_STORIES, memberById, storiesByMember } from "@/lib/mock/community";
+import { characterById } from "@/lib/mock/characters";
+import type { CommunityMember, CommunityStory } from "@/lib/types";
+import { CharacterFace } from "../characters";
+import { CoverArt } from "../ui";
 
 /**
- * F5 — Other spaces（handoff §4.5，像素对齐 05-other-spaces.html）
- * 2 列 white mount 卡片：128px tinted field + 底对齐角色 + 名字。
- * 计数徽标按 理理理.md v3 决策移除（低保真占位，不属于产品概念）。
- * 进入房间本期不做 —— toast 占位。
+ * F5 — 别人的空间(2026-08-29 改版:Community + Friends)
+ * - Community 信息流:卡片 = 对方的角色 + TA 公开的故事(封面/标题/摘录/留言数)
+ * - Friends:朋友列表 → 点进朋友的空间(角色 + TA 的故事列表)
+ * - 两个 tab 下点故事卡片都进只读详情(onOpenStory 交给帧状态机)
+ * 数据全部来自 lib/mock/community.ts;后端就绪后只换数据源,组件结构不变。
  */
 
-const HANDOFF_ORDER: FaceId[] = ["mira", "renn", "tola", "sena", "ivo", "pico"];
+type Tab = "community" | "friends";
 
-export default function F5Spaces({ onBack }: { onBack: () => void }) {
-  const [toast, setToast] = useState<string | null>(null);
+/** 角色圆头像(信息流派颗用) */
+function MemberAvatar({ member, size = 40 }: { member: CommunityMember; size?: number }) {
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: characterById(member.characterId).color,
+        flexShrink: 0,
+        overflow: "hidden",
+        display: "block",
+      }}
+    >
+      <CharacterFace
+        id={member.characterId}
+        size={size - 4}
+        style={{ width: size, height: size, objectFit: "cover", objectPosition: "50% 12%" }}
+      />
+    </span>
+  );
+}
 
+/** 社区信息流里的一张故事卡 */
+function StoryCard({ story, onOpen }: { story: CommunityStory; onOpen: () => void }) {
+  const owner = memberById(story.ownerId);
+  return (
+    <button
+      onClick={onOpen}
+      style={{
+        background: "var(--raised)",
+        borderRadius: "var(--r-panel)",
+        padding: "12px 12px 14px",
+        boxShadow: "var(--shadow-card)",
+        textAlign: "left",
+      }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <MemberAvatar member={owner} />
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 14, fontWeight: 700 }}>{owner.name}</span>
+          <span className="meta-italic" style={{ display: "block", fontSize: 11.5, marginTop: 1 }}>
+            和 TA 的{characterById(owner.characterId).name} · {story.date}
+          </span>
+        </span>
+      </span>
+      <span style={{ position: "relative", display: "block", height: 96, borderRadius: "var(--r-photo)", overflow: "hidden", marginTop: 10 }}>
+        <CoverArt cover={story.cover} />
+      </span>
+      <span style={{ display: "block", fontFamily: "var(--font-hand)", fontSize: 18, color: "var(--ink-blue)", marginTop: 10 }}>
+        {story.title}
+      </span>
+      <span
+        style={{
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 2,
+          overflow: "hidden",
+          fontSize: 13.5,
+          lineHeight: 1.7,
+          marginTop: 4,
+        }}
+      >
+        {story.excerpt}
+      </span>
+      <span className="meta-italic" style={{ display: "block", fontSize: 11.5, marginTop: 8, color: "var(--faint)" }}>
+        留言 · {story.comments.length}
+      </span>
+    </button>
+  );
+}
+
+export default function F5Spaces({
+  onBack,
+  onOpenStory,
+}: {
+  onBack: () => void;
+  onOpenStory: (storyId: string) => void;
+}) {
+  const [tab, setTab] = useState<Tab>("community");
+  const [friendId, setFriendId] = useState<string | null>(null); // 非空 = 正在看某位朋友的空间
+
+  const friends = COMMUNITY_MEMBERS.filter((m) => m.isFriend);
+
+  /* ── 朋友的空间(内部视图,不经过帧状态机) ── */
+  if (friendId) {
+    const friend = memberById(friendId);
+    const friendStories = storiesByMember(friendId);
+    return (
+      <div className="frame frame-enter">
+        <div className="nav-bar">
+          <button className="nav-side back-chevron" onClick={() => setFriendId(null)} aria-label="返回朋友列表">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+          <span className="nav-title">{friend.name} 的空间</span>
+          <span style={{ width: 44 }} />
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 16, paddingBottom: 12 }}>
+          {/* 朋友角色卡 */}
+          <div
+            style={{
+              background: "var(--raised)",
+              borderRadius: "var(--r-panel)",
+              padding: "14px 16px",
+              boxShadow: "var(--shadow-card)",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <span
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 20,
+                background: characterById(friend.characterId).color,
+                display: "flex",
+                alignItems: "flex-end",
+                justifyContent: "center",
+                overflow: "hidden",
+                flexShrink: 0,
+              }}
+            >
+              <CharacterFace id={friend.characterId} size={56} style={{ height: 64 }} />
+            </span>
+            <span>
+              <span style={{ display: "block", fontSize: 17, fontWeight: 700 }}>{friend.name}</span>
+              <span className="meta-italic" style={{ display: "block", fontSize: 12, marginTop: 3 }}>{friend.bio}</span>
+            </span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 18 }}>
+            {friendStories.length === 0 && (
+              <span className="meta-italic" style={{ fontSize: 12.5, color: "var(--placeholder)" }}>
+                TA 还没有公开的故事。
+              </span>
+            )}
+            {friendStories.map((s) => (
+              <StoryCard key={s.id} story={s} onOpen={() => onOpenStory(s.id)} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── 主视图:Community / Friends 双 tab ── */
   return (
     <div className="frame frame-enter">
       <div className="nav-bar">
-        <button className="nav-side back-chevron" onClick={onBack} aria-label="Back">
+        <button className="nav-side back-chevron" onClick={onBack} aria-label="返回">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </button>
-        <span className="nav-title">Other spaces</span>
+        <span className="nav-title">别人的空间</span>
         <span style={{ width: 44 }} />
       </div>
 
-      <span className="meta-italic" style={{ fontSize: 14, marginTop: 14 }}>
-        Rooms left open for anyone to walk through.
-      </span>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          gap: 14,
-          marginTop: 22,
-          overflowY: "auto",
-          paddingBottom: 8,
-        }}
-      >
-        {HANDOFF_ORDER.map((id) => {
-          const c = CHARACTERS.find((x) => x.id === id)!;
-          return (
-            <button
-              key={id}
-              onClick={() => setToast(`${c.name}'s room is still being tidied — check back soon.`)}
-              style={{
-                background: "var(--raised)",
-                border: "1px solid var(--line)",
-                padding: "8px 8px 14px",
-                boxShadow: "var(--shadow-card)",
-                textAlign: "left",
-              }}
-            >
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "center",
-                  height: 128,
-                  background: c.color,
-                  overflow: "hidden",
-                }}
-              >
-                <CharacterFace id={id} size={104} style={{ height: 118 }} />
-              </span>
-              <span style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 9, padding: "0 3px" }}>
-                <span style={{ fontSize: 14.5, fontWeight: 400 }}>{c.name}</span>
-                <span style={{ fontSize: 11.5, fontStyle: "italic", color: "var(--faint)" }}>the {c.species}</span>
-              </span>
-            </button>
-          );
-        })}
+      {/* tab 切换:下划线手法,与 Auth 的切换链接同源 */}
+      <div style={{ display: "flex", gap: 22, marginTop: 14, flexShrink: 0 }}>
+        {(
+          [
+            ["community", "社区"],
+            ["friends", "朋友"],
+          ] as [Tab, string][]
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              fontSize: 15,
+              fontWeight: tab === key ? 700 : 500,
+              color: tab === key ? "var(--ink)" : "var(--faint)",
+              borderBottom: tab === key ? "2px solid var(--story)" : "2px solid transparent",
+              paddingBottom: 4,
+              transition: "color 200ms var(--ease-soft)",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {toast && <Toast text={toast} onDone={() => setToast(null)} />}
+      <span className="meta-italic" style={{ fontSize: 13, marginTop: 10, flexShrink: 0 }}>
+        {tab === "community" ? "也许有你感兴趣的灵魂,路过就进去坐坐。" : "常来的朋友,和他们的房间。"}
+      </span>
+
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 14, paddingBottom: 12 }}>
+        {tab === "community" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {COMMUNITY_STORIES.map((s) => (
+              <StoryCard key={s.id} story={s} onOpen={() => onOpenStory(s.id)} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {friends.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setFriendId(m.id)}
+                style={{
+                  background: "var(--raised)",
+                  borderRadius: "var(--r-panel)",
+                  padding: "12px 14px",
+                  boxShadow: "var(--shadow-card)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  textAlign: "left",
+                }}
+              >
+                <MemberAvatar member={m} size={46} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 700 }}>{m.name}</span>
+                  <span className="meta-italic" style={{ display: "block", fontSize: 12, marginTop: 2 }}>{m.bio}</span>
+                </span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--chevron)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

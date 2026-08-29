@@ -11,9 +11,12 @@ import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
 import Reflect from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
+import Profile from "@/components/frames/Profile";
+import StoryDetail from "@/components/frames/StoryDetail";
 import { Companion } from "@/components/characters";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
-import { USE_BACKEND, hasAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
+import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/community";
+import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -24,7 +27,7 @@ import { USE_BACKEND, hasAccessToken, updateSessionVisibility, type PreparedSand
  * T1: companion 从角落跳到画面中央
  */
 
-type Frame = "auth" | "home" | "listening" | "reflect" | "pick" | "draft" | "sandplay" | "spaces";
+type Frame = "auth" | "home" | "listening" | "reflect" | "pick" | "draft" | "sandplay" | "spaces" | "profile" | "storyDetail";
 type Overlay = "t1" | null;
 
 /** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
@@ -42,6 +45,8 @@ function Shell() {
   const [castPersonas, setCastPersonas] = useState<Persona[] | null>(null); // 故事 Top 3 完整阵容
   const [prepared, setPrepared] = useState<PreparedSandplay | null>(null); // 阶段一并行准备好的解构结果
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
+  /** storyDetail 的数据来源:自己的历史(store)/ 社区故事(mock) */
+  const [detailSource, setDetailSource] = useState<"mine" | "community">("mine");
 
   /* 转场两段式：挂载后触发位移，结束后切帧（目前仅 T1 使用） */
   useEffect(() => {
@@ -170,6 +175,20 @@ function Shell() {
     setFrame("home");
   };
 
+  /* 退出登录:真后端调 /auth/logout;mock 模式清掉演示标记与本地 token → 回 auth 帧 */
+  const handleLogout = () => {
+    if (USE_BACKEND) void apiLogout().catch((error) => console.error("[auth] 退出登录失败:", error));
+    else {
+      try {
+        localStorage.removeItem(DEMO_SKIP_KEY);
+      } catch {
+        /* ignore */
+      }
+      setAccessToken(null);
+    }
+    setFrame("auth");
+  };
+
   const activeStory = stories.find((s) => s.id === activeStoryId) ?? stories[0];
 
   return (
@@ -178,12 +197,15 @@ function Shell() {
       {frame === "home" && (
         <F1Home
           enterClass={homeEnter}
-          onOpenSandplay={(id) => {
+          /* 已保存的故事 → 只读详情(含留言);新建故事只走 Create 按钮 */
+          onOpenStory={(id) => {
             setActiveStoryId(id);
-            setFrame("sandplay");
+            setDetailSource("mine");
+            setFrame("storyDetail");
           }}
           onNewStory={startNewStory}
           onVisitSpaces={() => setFrame("spaces")}
+          onOpenProfile={() => setFrame("profile")}
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
@@ -218,7 +240,53 @@ function Shell() {
           onDiscard={pending ? discardPending : undefined}
         />
       )}
-      {frame === "spaces" && <F5Spaces onBack={backHome} />}
+      {frame === "spaces" && (
+        <F5Spaces
+          onBack={backHome}
+          onOpenStory={(id) => {
+            setActiveStoryId(id);
+            setDetailSource("community");
+            setFrame("storyDetail");
+          }}
+        />
+      )}
+      {frame === "profile" && <Profile onBack={backHome} onLogout={handleLogout} />}
+      {frame === "storyDetail" &&
+        (detailSource === "community" ? (
+          /* 别人的故事:只读 + 可写留言 */
+          (() => {
+            const cs = communityStoryById(activeStoryId ?? "");
+            if (!cs) return null;
+            const owner = memberById(cs.ownerId);
+            return (
+              <StoryDetail
+                title={cs.title}
+                date={cs.date}
+                cover={cs.cover}
+                transcript={cs.transcript}
+                ownerName={owner.name}
+                initialComments={cs.comments}
+                canComment
+                onBack={() => setFrame("spaces")}
+              />
+            );
+          })()
+        ) : (
+          /* 自己的历史故事:纯只读,展示别人的留言 */
+          activeStory && (
+            <StoryDetail
+              title={activeStory.title}
+              date={activeStory.date}
+              cover={activeStory.cover}
+              transcript={activeStory.transcript}
+              reflection={activeStory.reflection}
+              visibility={activeStory.visibility}
+              initialComments={OWN_STORY_COMMENTS[activeStory.id] ?? []}
+              canComment={false}
+              onBack={backHome}
+            />
+          )
+        ))}
 
       {/* T1 overlay：companion 跳到画面中央 */}
       {overlay === "t1" && (
