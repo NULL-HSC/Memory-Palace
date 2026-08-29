@@ -42,17 +42,17 @@ export default function Premiere({
         <circle cx="340" cy="33" r="4" fill="var(--sky)" opacity="0.75" />
         <path d="M338 46 Q346 42 348 36" fill="none" stroke="var(--story)" strokeWidth="1.4" strokeLinecap="round" />
       </svg>
-      {/* 底部:剧院座位排(后排观众的椅背剪影,雾蓝低饱和) */}
+      {/* 底部:剧院座位排(后排观众的椅背剪影,雾蓝低饱和)—— 错位高低 + 微倾斜 + 深浅不一,不规则分布更灵动 */}
       <svg aria-hidden viewBox="0 0 390 88" preserveAspectRatio="xMidYMax slice" style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 88, zIndex: 1, pointerEvents: "none" }}>
         {[
-          { x: 22, w: 58, y: 34, h: 54 },
-          { x: 92, w: 72, y: 24, h: 64 },
-          { x: 172, w: 60, y: 40, h: 48 },
-          { x: 246, w: 70, y: 28, h: 60 },
-          { x: 324, w: 56, y: 36, h: 52 },
+          { x: 16, w: 54, y: 44, h: 44, rx: 16, r: -4, o: 0.9 },
+          { x: 82, w: 78, y: 20, h: 68, rx: 22, r: 2, o: 1 },
+          { x: 170, w: 56, y: 50, h: 38, rx: 16, r: -2, o: 0.8 },
+          { x: 236, w: 72, y: 26, h: 62, rx: 20, r: 3, o: 1 },
+          { x: 316, w: 62, y: 36, h: 52, rx: 18, r: -3, o: 0.9 },
         ].map((seat, i) => (
-          <g key={i}>
-            <rect x={seat.x} y={seat.y} width={seat.w} height={seat.h} rx="18" fill="var(--mist)" />
+          <g key={i} transform={`rotate(${seat.r} ${seat.x + seat.w / 2} 88)`} opacity={seat.o}>
+            <rect x={seat.x} y={seat.y} width={seat.w} height={seat.h} rx={seat.rx} fill="var(--mist)" />
             <rect x={seat.x} y={seat.y} width={seat.w} height="14" rx="7" fill="rgba(47,159,200,0.18)" />
           </g>
         ))}
@@ -220,7 +220,8 @@ export default function Premiere({
                 "repeating-linear-gradient(0deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px), repeating-linear-gradient(90deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px)",
             }}
           >
-            <div style={{ fontFamily: "var(--font-hand)", fontSize: 21, fontWeight: 600, color: "var(--ink-blue)" }}>
+            {/* 标题与 Home 拍立得 caption 同款手写栈(--font-hand,中文回落小赖),稍大一号 */}
+            <div style={{ fontFamily: "var(--font-hand)", fontSize: 24, fontWeight: 600, color: "var(--ink-blue)", lineHeight: 1.2 }}>
               {playbackUrl ? (ended ? "看完了" : "今天的故事") : "今天的故事"}
             </div>
             <div style={{ fontFamily: "var(--font-hand)", fontSize: 12.5, marginTop: 3, color: "var(--butter)", textShadow: "0 1px 2px rgba(15,45,66,0.15)" }}>
