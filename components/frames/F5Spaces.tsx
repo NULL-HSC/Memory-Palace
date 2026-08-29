@@ -52,18 +52,20 @@ function Sparkles({ style }: { style?: React.CSSProperties }) {
   );
 }
 
-/** 和纸胶带(材料表:奶油黄油半透明条 62×22,永远斜 5–10°、永远在角上,每屏最多一条) */
+/** 和纸胶带(材料表:黄油半透明条,永远斜 5–10°、永远在角上,每屏最多一条)
+ *  自然感:两端微圆、略窄、微透明,像随手贴上去的 */
 function WashiTape({ style }: { style?: React.CSSProperties }) {
   return (
     <span
       aria-hidden
       style={{
         position: "absolute",
-        width: 62,
-        height: 22,
-        background: "rgba(255,216,106,0.85)",
-        boxShadow: "0 1px 3px rgba(15,45,66,0.14)",
-        transform: "rotate(-7deg)",
+        width: 56,
+        height: 20,
+        borderRadius: 3,
+        background: "rgba(255,216,106,0.8)",
+        boxShadow: "0 1px 2px rgba(15,45,66,0.12)",
+        transform: "rotate(-8deg)",
         ...style,
       }}
     />
@@ -73,7 +75,8 @@ function WashiTape({ style }: { style?: React.CSSProperties }) {
 /** 照片凹槽内阴影(kit polaroid__photo::after 同款:让封面读作「裱进框里的真照片」) */
 const PHOTO_INSET = "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)";
 
-/** 社区信息流里的一张故事卡 —— 按主视觉 polaroid 配方:r-panel 圆角 + lift-2 投影 + 照片凹槽 + 微斜钉上墙 */
+/** 社区信息流里的一张故事卡 —— 白底深蓝描边(ink-blue)与奶油背景拉开;
+ *  投影取首页前置卡参数(lift-3);微斜钉上墙;r-panel 圆角 + 照片凹槽 */
 function StoryCard({ story, index, onOpen }: { story: CommunityStory; index: number; onOpen: () => void }) {
   const owner = memberById(story.ownerId);
   return (
@@ -82,15 +85,16 @@ function StoryCard({ story, index, onOpen }: { story: CommunityStory; index: num
       style={{
         position: "relative",
         background: "var(--raised)",
+        border: "1.5px solid var(--ink-blue)",
         borderRadius: "var(--r-panel)",
         padding: "12px 12px 14px",
-        boxShadow: "var(--lift-2)",
+        boxShadow: "var(--lift-3)",
         textAlign: "left",
         transform: `rotate(${index % 2 === 0 ? -1.1 : 1}deg)`,
       }}
     >
       {/* 第一张卡贴一条和纸胶带(每屏一条,贴在左上角) */}
-      {index === 0 && <WashiTape style={{ top: -10, left: 20 }} />}
+      {index === 0 && <WashiTape style={{ top: -9, left: 22 }} />}
       <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <MemberAvatar member={owner} />
         <span style={{ minWidth: 0, flex: 1 }}>
