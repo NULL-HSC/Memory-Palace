@@ -63,6 +63,14 @@ export interface SpeakerTurn {
   text: string;
 }
 
+/**
+ * 旁白(上帝视角)的保留 speakerId(2026-08-29 产品确认)。
+ * 群聊里除故事角色外还有一个客观陈述的声音;
+ * **插入时机完全由后端判断** —— 后端在回复流里带上 speakerId = NARRATOR_ID 的一条,
+ * 前端把它渲染成聊天区顶部样式完全不同的旁白气泡,不进普通聊天气泡流。
+ */
+export const NARRATOR_ID = "narrator";
+
 export interface Room {
   characterId: Exclude<CharacterId, "user">;
   isOpen: boolean; // 常开；进入房间功能本期不做

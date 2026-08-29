@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DialogueTurn, Persona, SpeakerTurn, Story } from "@/lib/types";
+import { NARRATOR_ID } from "@/lib/types";
 import { runTurn, type TurnMode } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
 import { TypeText } from "../ui";
@@ -208,10 +209,21 @@ export default function F4Sandplay({
   const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
   const [micNote, setMicNote] = useState(false);
 
+  /* 旁白(上帝视角):后端判断时机,回复流里 speakerId = narrator 的一条。
+     不走普通聊天气泡 —— 最新一条钉在聊天区顶部,样式完全不同(深底);流式时逐字吐在横幅里 */
+  const narratorStreaming = streaming?.speakerId === NARRATOR_ID ? streaming : null;
+  const narratorLatest = [...messages].reverse().find((m) => m.speakerId === NARRATOR_ID);
+  const settleStreaming = () => {
+    const done = streaming;
+    if (!done) return;
+    setMessages((m) => [...m, toTurn(story.id, done)]);
+    resolverRef.current?.();
+  };
+
   return (
     <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* ══ 顶部:雾蓝波浪布条(短版,同 Home 的手法) ══ */}
-      <svg aria-hidden viewBox="0 0 390 76" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 76, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}>
+      <svg aria-hidden viewBox="0 0 390 76" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 76", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}>
         <defs>
           <linearGradient id="roomBandG" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#EAF6FB" />
@@ -285,6 +297,31 @@ export default function F4Sandplay({
           </div>
         </div>
 
+        {/* ══ 旁白横幅:上帝视角的客观陈述,钉在聊天区顶部,与所有角色气泡完全区分 ══ */}
+        {(narratorStreaming || narratorLatest) && (
+          <div key={narratorLatest?.ts ?? "stream"} style={{ margin: "10px var(--screen-x) 0", flexShrink: 0 }}>
+            <div
+              style={{
+                background: "var(--ink-blue)",
+                borderRadius: "var(--r-chip)",
+                padding: "10px 14px 11px",
+                boxShadow: "var(--lift-2)",
+                animation: "bubbleIn 320ms var(--ease-soft) both",
+              }}
+            >
+              <span style={{ display: "block", fontSize: 11, fontStyle: "italic", letterSpacing: 1.5, color: "rgba(255,249,238,0.65)" }}>
+                旁白 · 上帝视角
+              </span>
+              <span
+                aria-live={narratorStreaming ? "polite" : undefined}
+                style={{ display: "block", marginTop: 4, fontSize: 13.5, fontStyle: "italic", lineHeight: 1.6, color: "var(--text-on-ink)" }}
+              >
+                {narratorStreaming ? <TypeText text={narratorStreaming.text} speed={26} onDone={settleStreaming} /> : narratorLatest?.text}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ══ 群聊列表 ══ */}
         <div
           ref={scrollRef}
@@ -299,7 +336,7 @@ export default function F4Sandplay({
           }}
         >
           {messages.map((m) =>
-            m.speakerId === "user" ? (
+            m.speakerId === NARRATOR_ID ? null : m.speakerId === "user" ? (
               <div key={m.ts + m.text} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", gap: 8, animation: "bubbleIn 300ms var(--ease-soft) both" }}>
                 <div
                   style={{
@@ -318,18 +355,14 @@ export default function F4Sandplay({
               <ChatMessage key={m.ts + m.text} speaker={personaById(m.speakerId)} text={m.text} />
             )
           )}
-          {streaming && (
+          {streaming && streaming.speakerId !== NARRATOR_ID && (
             <ChatMessage
               speaker={personaById(streaming.speakerId)}
               streamingText={streaming.text}
-              onStreamDone={() => {
-                const done = streaming;
-                setMessages((m) => [...m, toTurn(story.id, done)]);
-                resolverRef.current?.();
-              }}
+              onStreamDone={settleStreaming}
             />
           )}
-          {typingId && <ChatTyping speaker={personaById(typingId)} />}
+          {typingId && typingId !== NARRATOR_ID && <ChatTyping speaker={personaById(typingId)} />}
           {llmError && (
             <button
               onClick={retryRound}
@@ -430,7 +463,7 @@ export default function F4Sandplay({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(255,249,238,0.88)",
+            background: "var(--scrim)",
             zIndex: 120,
           }}
         >
@@ -478,7 +511,7 @@ export default function F4Sandplay({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(255,249,238,0.88)",
+            background: "var(--scrim)",
             zIndex: 120,
           }}
         >
