@@ -11,9 +11,10 @@ import { transcriptBeats } from "@/lib/mock/transcript";
  * - 底部不再有 Type it / Done;确认入口改为右上角「寄出」图标(send letter)→ 直接进下一页
  * startRecording / stopRecording 仍是未来真 ASR 的接入点(见函数内注释)。
  */
-/* 信纸横线:行距必须等于横线周期(kit letter 规则);暖调(butter-under)低透明,字压在线上 */
+/* 信纸横线:行距必须等于横线周期(kit letter 规则);暖调(butter-under)低透明,字压在线上。
+   方向必须 to bottom(从顶往下量),线才会落在每一行的行底而不是行顶 */
 const RULE = 32;
-const LETTER_LINES = `repeating-linear-gradient(0deg, transparent 0 ${RULE - 1}px, rgba(233,184,74,0.3) ${RULE - 1}px ${RULE}px)`;
+const LETTER_LINES = `repeating-linear-gradient(to bottom, transparent 0 ${RULE - 1}px, rgba(233,184,74,0.3) ${RULE - 1}px ${RULE}px)`;
 
 export default function F2Listening({
   onBack,
@@ -36,6 +37,9 @@ export default function F2Listening({
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const pRef = useRef<HTMLParagraphElement>(null);
+  const pendingCaretRef = useRef<number | null>(null); // 点按进入打字时要落的光标位置
 
   /* 卸载清理:录制语流 / 秒表 / 沉淀态延迟,任何定时器都不许泄漏 */
   useEffect(() => {
@@ -96,12 +100,42 @@ export default function F2Listening({
     }
   };
 
-  /* 点空白区域 → 打字:停录(文字保留)并切到键盘输入 */
-  const startTyping = () => {
+  /* 语音/打字是同一份文本:typed 是主缓冲,words 只是「最近一段语音」的临时区。
+     切进打字时把语音词合并进文本框,从此都在 textarea 里编辑,不会再“覆盖成空白” */
+  const mergedText = [typed, words.join(" ")].map((s) => s.trim()).filter(Boolean).join(" ");
+
+  /* 点文字区 → 打字:停录;语音词并入 typed;光标落在点按的那个字上(caretRangeFromPoint 量偏移) */
+  const startTyping = (e: React.MouseEvent) => {
     if (typeMode || settling) return;
     stopRecording();
+    const p = pRef.current;
+    const point = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (p && point && p.contains(point.startContainer)) {
+      const r = document.createRange();
+      r.setStart(p, 0);
+      r.setEnd(point.startContainer, point.startOffset);
+      pendingCaretRef.current = Math.min(r.toString().length, mergedText.length);
+    } else {
+      pendingCaretRef.current = null; // 点在文字外 → 光标落文末
+    }
+    if (words.length > 0) {
+      setTyped(mergedText);
+      setWords([]);
+    }
     setTypeMode(true);
   };
+
+  /* 进入打字模式后:聚焦 + 还原点按处的光标 */
+  useEffect(() => {
+    if (!typeMode) return;
+    const ta = textRef.current;
+    if (!ta) return;
+    ta.focus();
+    const pos = pendingCaretRef.current;
+    const caret = pos == null ? ta.value.length : Math.min(pos, ta.value.length);
+    ta.setSelectionRange(caret, caret);
+    pendingCaretRef.current = null;
+  }, [typeMode]);
 
   /* 点麦克风 → 语音:离开打字模式(已打文字保留)并开/停录 */
   const toggleRecording = () => {
@@ -116,15 +150,15 @@ export default function F2Listening({
 
   // 寄出门槛:≥50 字(防过短文本进人设提取);不足时提示用户把故事说完整
   const MIN_SEND_LEN = 50;
-  const fullText = typeMode ? typed.trim() : words.join(" ");
+  const fullText = (typeMode ? typed : mergedText).trim();
   const canSend = fullText.length >= MIN_SEND_LEN;
 
   const handleSend = () => {
     if (!canSend || settling) return;
     setSettling(true); // 寄出沉淀态:文字落定后提交(理理理.md §7)
     stopRecording();
-    // 提交用户实际输入的内容,而不是完整 mock
-    settleTimerRef.current = setTimeout(() => onDone(typeMode ? typed : words.join(" ")), 800);
+    // 提交用户实际输入的内容(语音+打字合稿),而不是完整 mock
+    settleTimerRef.current = setTimeout(() => onDone(fullText), 800);
   };
 
   const mm = Math.floor(seconds / 60);
@@ -173,7 +207,7 @@ export default function F2Listening({
       {/* 输入区(信纸):打字模式铺满 textarea;否则展示转写,点空白处弹键盘 */}
       {typeMode ? (
         <textarea
-          autoFocus
+          ref={textRef}
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           placeholder="想到哪儿写到哪儿…"
@@ -202,13 +236,15 @@ export default function F2Listening({
           aria-label="点这里打字"
           style={{ marginTop: 12, flex: 1, minHeight: 0, overflowY: "auto", cursor: "text" }}
         >
-          <p style={{ margin: 0, fontSize: 21, fontWeight: 300, lineHeight: `${RULE}px`, backgroundImage: LETTER_LINES, backgroundAttachment: "local" }}>
+          <p ref={pRef} style={{ margin: 0, minHeight: "100%", fontSize: 21, fontWeight: 300, lineHeight: `${RULE}px`, backgroundImage: LETTER_LINES, backgroundAttachment: "local" }}>
+            {/* 已打好的字和刚说的词同屏显示;点哪里,光标就落在哪个字上 */}
+            {typed && <span className="word-final">{typed} </span>}
             {words.map((w, i) => (
               <span key={i} className={i >= words.length - 3 && streaming ? "word-partial" : "word-final"}>
                 {w}{" "}
               </span>
             ))}
-            {words.length === 0 && started && <span className="word-partial">…</span>}
+            {words.length === 0 && started && !typed && <span className="word-partial">…</span>}
           </p>
         </div>
       )}
