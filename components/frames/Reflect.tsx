@@ -1,29 +1,41 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { prepareSandplay, runGodfather, type PreparedSandplay } from "@/lib/api";
+import React, { useEffect, useRef, useState } from "react";
+import { getPlaybackUrl, getSessionStatus, prepareSandplay, type PreparedSandplay } from "@/lib/api";
 import { Companion } from "../characters";
-import { TypeText } from "../ui";
 import { ClosedCurtainBackdrop } from "../scene/Curtain";
 
 /**
- * 阶段一 · 旁观者陪聊(docs/product-flow.md「两个阶段」)
+ * 等候室(2026-08-29 产品确认改版)
  *
- * 说完故事之后、场景还在准备的那段等待里,一个**站在故事外**的声音陪用户说几句,
- * 谈「这件事说明什么」,而不是演绎剧情。准备就绪 → 它说一句话把人送进重演,然后退场。
+ * 寄出故事之后、场景还在准备的等待环节:
+ * - 中部是**占位符区**:等待时的冥想/小游戏尚未定方向,先留空(gingham 虚线槽位)
+ * - 不再有旁观者陪聊 LLM;只安静等待「VLM 视频返回」这个外部事件
+ * - 视频就绪 → 幕前出现一封**回信**;用户拆开 → 幕布拉开(CurtainVeil)→ 首映页
  *
- * 与阶段二群聊的关键区别:这里只有一个声音、没有 SILENT / 轮内可见 / 2 人上限,
- * 且**由外部事件(解构完成)结束**,所以任何时刻都要可被打断 —— 不能写成定长脚本。
- *
- * 这一帧同时承担真正的等待:挂载即并行发起 prepareSandplay(建 session → 触发视频任务
- * → 提取人设),对话只是把这段等待填上。结果向上传给 PickRole,避免它再请求一次。
+ * 这一帧同时承担真正的等待:挂载即并行 prepareSandplay(建 session → 触发视频任务
+ * → 提取人设),随后等视频生成完成。结果经 onReady 向上传,避免后续帧重复请求。
  */
 
-const LINGER_AFTER = 22000; // 用户沉默且尚未就绪 → 再补一句
-const MAX_LINGER = 2; // 补句上限,避免话痨
-const AUTO_ADVANCE = 4200; // handoff 说完后自动进场的宽限(输入框有字则不自动走)
+const MOCK_VIDEO_MS = 4200; // 本地演示:模拟 VLM 生成耗时
 
-type Line = { who: "them" | "you"; text: string; id: number };
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 轮询后端 session 直到视频就绪,返回播放地址;失败/超时抛错(与 SandplayStage 同一套状态约定) */
+async function waitForVideoPlayback(sessionId: string): Promise<string> {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const session = await getSessionStatus(sessionId);
+    const status = session.video.status.toLowerCase();
+    if (["succeeded", "completed", "ready", "success"].includes(status)) {
+      return getPlaybackUrl(session.video.id);
+    }
+    if (["failed", "error", "cancelled", "canceled"].includes(status)) {
+      throw new Error(session.video.message || session.video.error_code || "视频生成失败");
+    }
+    await delay(2500);
+  }
+  throw new Error("等待视频生成超时");
+}
 
 export default function Reflect({
   transcript,
@@ -31,155 +43,62 @@ export default function Reflect({
   onBack,
 }: {
   transcript: string;
-  onReady: (prepared: PreparedSandplay) => void;
+  /** 就绪拆开回信:解构结果 + 视频播放地址(无真后端/视频失败时为 null,首映页有兜底) */
+  onReady: (prepared: PreparedSandplay, playbackUrl: string | null) => void;
   onBack: () => void;
 }) {
-  const [lines, setLines] = useState<Line[]>([]);
-  const [streaming, setStreaming] = useState<string | null>(null);
-  const [thinking, setThinking] = useState(false);
-  const [input, setInput] = useState("");
-  const [handedOff, setHandedOff] = useState(false);
   const [prepError, setPrepError] = useState<string | null>(null);
-  const [voiceError, setVoiceError] = useState(false); // 陪聊挂了不该挡路,单独标记
+  const [letterReady, setLetterReady] = useState(false); // 视频就绪 → 回信抵达
 
   const preparedRef = useRef<PreparedSandplay | null>(null);
+  const playbackRef = useRef<string | null>(null);
   const aliveRef = useRef(true);
-  const busyRef = useRef(false); // 一次只允许一个 godfather 请求在飞
-  const openedRef = useRef(false); // 开场只说一次
-  const inflightPrepRef = useRef<string | null>(null); // StrictMode 双挂去重
-  const lingerCountRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const linesRef = useRef<Line[]>([]);
-  linesRef.current = lines;
-  const inputRef = useRef("");
-  inputRef.current = input;
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const seqRef = useRef(0);
+  const inflightRef = useRef<string | null>(null); // StrictMode 双挂去重
 
-  const armLinger = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      if (!aliveRef.current || preparedRef.current || busyRef.current) return;
-      if (lingerCountRef.current >= MAX_LINGER) return;
-      lingerCountRef.current += 1;
-      void say("linger");
-    }, LINGER_AFTER);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** 说一句(open / respond / linger / handoff)。陪聊失败不阻断主链路,只记一次标记。 */
-  const say = useCallback(
-    async (mode: "open" | "respond" | "linger" | "handoff", userMessage?: string) => {
-      if (busyRef.current || !aliveRef.current) return;
-      busyRef.current = true;
-      setThinking(true);
-      try {
-        const text = await runGodfather(mode, {
-          transcript,
-          history: linesRef.current.map((l) => ({
-            storyId: "reflect",
-            speakerId: l.who === "you" ? "user" : "godfather",
-            text: l.text,
-            ts: 0,
-          })),
-          userMessage,
-        });
+  /** 完整的「等回信」流程:解构 → 等视频 → 回信抵达 */
+  const waitForLetter = () => {
+    if (inflightRef.current === transcript) return;
+    inflightRef.current = transcript;
+    setPrepError(null);
+    setLetterReady(false);
+    prepareSandplay(transcript)
+      .then(async (p) => {
         if (!aliveRef.current) return;
-        setVoiceError(false);
-        setThinking(false);
-        setStreaming(text);
-        if (mode === "handoff") setHandedOff(true);
-      } catch (e) {
-        console.error(`[reflect] godfather ${mode} 失败:`, e);
+        preparedRef.current = p;
+        if (p.session) {
+          // 真后端:等 VLM 视频;视频失败不挡路,首映页用兜底画面
+          try {
+            playbackRef.current = await waitForVideoPlayback(p.session.session_id);
+          } catch (error) {
+            console.error("[reflect] 视频等待失败,首映页走兜底:", error);
+            playbackRef.current = null;
+          }
+        } else {
+          // 本地演示:模拟 VLM 生成耗时
+          await delay(MOCK_VIDEO_MS);
+        }
+        if (aliveRef.current) setLetterReady(true);
+      })
+      .catch((e) => {
         if (!aliveRef.current) return;
-        setThinking(false);
-        setVoiceError(true);
-        // 陪聊说不出话时不能把人卡在这一帧:已就绪就直接放行
-        if (mode === "handoff") setHandedOff(true);
-      } finally {
-        busyRef.current = false;
-      }
-    },
-    [transcript]
-  );
+        setPrepError(e instanceof Error ? e.message : String(e));
+        inflightRef.current = null;
+      });
+  };
 
-  /* 挂载:并行启动「真正的准备」与「开场白」 */
   useEffect(() => {
     aliveRef.current = true;
-    if (inflightPrepRef.current !== transcript) {
-      inflightPrepRef.current = transcript;
-      setPrepError(null);
-      prepareSandplay(transcript)
-        .then((p) => {
-          if (!aliveRef.current) return;
-          preparedRef.current = p;
-        })
-        .catch((e) => {
-          if (!aliveRef.current) return;
-          setPrepError(e instanceof Error ? e.message : String(e));
-          inflightPrepRef.current = null;
-        });
-    }
-    if (!openedRef.current) {
-      openedRef.current = true;
-      void say("open");
-    }
+    waitForLetter();
     return () => {
       aliveRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transcript]);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [lines, streaming, thinking]);
-
-  /** 一句话说完落定:决定下一步 —— 就绪则交接,否则等用户。
-   *  必须是稳定引用:TypeText 的 effect 依赖 onDone,每次父组件重渲染换新函数都会重置
-   *  正在跑的逐字定时器 —— 用户一边打字一边看它吐字时会把整句卡住。 */
-  const settle = useCallback(
-    (text: string) => {
-      setStreaming(null);
-      setLines((l) => [...l, { who: "them", text, id: seqRef.current++ }]);
-      if (!aliveRef.current) return;
-      if (preparedRef.current && !handedOff) {
-        void say("handoff");
-      } else if (!handedOff) {
-        armLinger();
-      }
-    },
-    [handedOff, say, armLinger]
-  );
-
-  const handleStreamDone = useCallback(() => {
-    if (streaming !== null) settle(streaming);
-  }, [streaming, settle]);
-
-  const send = () => {
-    const text = input.trim();
-    if (!text || busyRef.current) return;
-    setInput("");
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setLines((l) => [...l, { who: "you", text, id: seqRef.current++ }]);
-    void say("respond", text);
-  };
-
-  const enter = useCallback(() => {
+  const openLetter = () => {
     if (!preparedRef.current) return;
-    onReady(preparedRef.current);
-  }, [onReady]);
-
-  /* 交接说完 → 输入框为空时自动进场;有字说明用户还在写,等他按按钮 */
-  useEffect(() => {
-    if (!handedOff || streaming) return;
-    const t = setTimeout(() => {
-      if (aliveRef.current && !inputRef.current.trim()) enter();
-    }, AUTO_ADVANCE);
-    return () => clearTimeout(t);
-  }, [handedOff, streaming, enter]);
-
-  const ready = preparedRef.current !== null;
+    onReady(preparedRef.current, playbackRef.current);
+  };
 
   return (
     <div className="frame frame-enter">
@@ -194,8 +113,7 @@ export default function Reflect({
         <span className="nav-side" />
       </div>
 
-      {/* 等候室 = 舞台口:背后是一直闭着的舞台幕布 + 台前光,companion 站在幕前陪你等。
-          强调「幕布还没拉开」;解构/VLM 就绪后由 page.tsx 的 CurtainVeil 做幕布拉开转场 */}
+      {/* 舞台口:背后是一直闭着的幕布 + 台前光,companion 站在幕前陪你等 */}
       <div style={{ position: "relative", marginTop: 18, flexShrink: 0, height: 170 }}>
         <ClosedCurtainBackdrop height={132} />
         <div style={{ position: "absolute", left: "50%", bottom: 0, transform: "translateX(-50%)" }}>
@@ -203,55 +121,17 @@ export default function Reflect({
         </div>
       </div>
 
-      {/* 对话区 */}
-      <div
-        ref={scrollRef}
-        aria-live="polite"
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: "auto",
-          marginTop: 18,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          paddingBottom: 8,
-        }}
-      >
-        {lines.map((l) =>
-          l.who === "them" ? (
-            <ThemBubble key={l.id} text={l.text} />
-          ) : (
-            <YouBubble key={l.id} text={l.text} />
-          )
-        )}
-        {streaming !== null && <ThemBubble streamingText={streaming} onDone={handleStreamDone} />}
-        {thinking && <ThinkingDots />}
-
-        {/* 准备失败:这条路走不下去,给真实原因 + 重试 */}
-        {prepError && (
-          <div style={{ textAlign: "center", padding: "18px 0" }}>
+      {/* 中部:等待占位符区 / 回信抵达 */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", marginTop: 18 }}>
+        {prepError ? (
+          /* 准备失败:这条路走不下去,给真实原因 + 重试 */
+          <div style={{ textAlign: "center", margin: "auto 0" }}>
             <div className="meta-italic" style={{ fontSize: 13.5 }}>这会儿没能把景搭起来。</div>
             <div style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.5, color: "var(--placeholder)", wordBreak: "break-word" }}>
               {prepError}
             </div>
             <button
-              onClick={() => {
-                inflightPrepRef.current = null;
-                setPrepError(null);
-                inflightPrepRef.current = transcript;
-                prepareSandplay(transcript)
-                  .then((p) => {
-                    if (!aliveRef.current) return;
-                    preparedRef.current = p;
-                    if (!busyRef.current && !handedOff) void say("handoff");
-                  })
-                  .catch((e) => {
-                    if (!aliveRef.current) return;
-                    setPrepError(e instanceof Error ? e.message : String(e));
-                    inflightPrepRef.current = null;
-                  });
-              }}
+              onClick={waitForLetter}
               style={{
                 marginTop: 14,
                 minHeight: 44,
@@ -266,162 +146,66 @@ export default function Reflect({
               再试一次
             </button>
           </div>
-        )}
-
-        {/* 陪聊挂了但准备没挂:不解释技术细节,只把人放行 */}
-        {voiceError && !prepError && (
-          <div className="meta-italic" style={{ alignSelf: "center", fontSize: 12.5 }}>
-            它这会儿安静一会儿…
+        ) : letterReady ? (
+          /* 回信抵达:一封信落在舞台上,等用户拆开 */
+          <div className="is-pop" style={{ margin: "auto 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <button
+              onClick={openLetter}
+              aria-label="拆开回信"
+              style={{
+                width: 240,
+                background: "var(--raised)",
+                borderRadius: "var(--r-panel)",
+                padding: "22px 20px 18px",
+                boxShadow: "var(--shadow-print-review)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                transform: "rotate(-1.5deg)",
+              }}
+            >
+              {/* 信封:奶油纸 + 三角封口 + butter 火漆 */}
+              <svg width="72" height="52" viewBox="0 0 72 52" aria-hidden>
+                <rect x="2" y="6" width="68" height="44" rx="6" fill="var(--cream)" stroke="var(--story)" strokeWidth="1.6" />
+                <path d="M4 8 L36 34 L68 8" fill="none" stroke="var(--story)" strokeWidth="1.6" strokeLinejoin="round" />
+                <circle cx="36" cy="30" r="7" fill="var(--butter)" stroke="var(--butter-under)" strokeWidth="1.4" />
+              </svg>
+              <span style={{ fontFamily: "var(--font-hand)", fontSize: 20, color: "var(--ink-blue)", marginTop: 12 }}>
+                你的故事回信了
+              </span>
+              <span className="meta-italic" style={{ fontSize: 12.5, marginTop: 6 }}>
+                点开,幕布就拉开
+              </span>
+            </button>
+          </div>
+        ) : (
+          /* 占位符:等待时的冥想/小游戏方向未定,先留空(gingham = 空白待填,kit §3) */
+          <div
+            className="gingham"
+            style={{
+              flex: 1,
+              borderRadius: "var(--r-panel)",
+              border: "1.5px dashed var(--slot-border)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: 24,
+            }}
+          >
+            <span className="meta-italic" style={{ fontSize: 13.5 }}>正在等回信…</span>
+            <span className="meta-italic" style={{ fontSize: 12, color: "var(--faint)", textAlign: "center", lineHeight: 1.7 }}>
+              (等待时的小游戏 / 冥想,这里先留空)
+            </span>
           </div>
         )}
       </div>
 
-      {/* 底部:准备好之前是输入栏,准备好之后换成进场按钮 */}
-      <div style={{ flexShrink: 0, paddingTop: 6 }}>
-        {handedOff || (ready && voiceError) ? (
-          <button className="btn" onClick={enter} style={{ width: "100%" }}>
-            <span>拉开帷幕,进场</span>
-          </button>
-        ) : (
-          <>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                minHeight: 52,
-                padding: "0 8px 0 18px",
-                borderRadius: 26,
-                background: "var(--raised)",
-                border: "1px solid var(--line-strong)",
-                boxShadow: "var(--shadow-input)",
-              }}
-            >
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="回一句吧…"
-                aria-label="回话"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  border: "none",
-                  background: "transparent",
-                  fontSize: 15,
-                  color: "var(--ink)",
-                  padding: 0,
-                }}
-              />
-              <button
-                onClick={send}
-                aria-label="发送"
-                disabled={!input.trim()}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 44,
-                  height: 44,
-                  flexShrink: 0,
-                  opacity: input.trim() ? 1 : 0.45,
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", background: "var(--butter)", boxShadow: "var(--press-butter)" }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" />
-                  </svg>
-                </span>
-              </button>
-            </div>
-            <div className="meta-italic" style={{ display: "block", textAlign: "center", marginTop: 10 }}>
-              {ready ? "布景好了,可以开演" : "幕布后面正在布景…"}
-            </div>
-          </>
-        )}
+      {/* 底部状态 */}
+      <div className="meta-italic" style={{ textAlign: "center", marginTop: 14, flexShrink: 0 }}>
+        {prepError ? "" : letterReady ? "布景好了" : "幕布后面正在布景…"}
       </div>
-    </div>
-  );
-}
-
-/* 旁观者的话:靠左,mist 底 —— 不是故事里的人,所以不带角色头像 */
-function ThemBubble({
-  text,
-  streamingText,
-  onDone,
-}: {
-  text?: string;
-  streamingText?: string;
-  onDone?: () => void;
-}) {
-  return (
-    <div
-      style={{
-        alignSelf: "flex-start",
-        maxWidth: "88%",
-        padding: "13px 16px",
-        borderRadius: "20px 20px 20px 6px",
-        background: "var(--sunken)",
-        color: "var(--text-on-mist)",
-        fontSize: 15.5,
-        lineHeight: 1.55,
-        animation: "bubbleIn 320ms var(--ease-soft) both",
-      }}
-    >
-      {streamingText != null ? <TypeText text={streamingText} speed={24} onDone={onDone} /> : text}
-    </div>
-  );
-}
-
-/* 用户的话:靠右 */
-function YouBubble({ text }: { text: string }) {
-  return (
-    <div
-      style={{
-        alignSelf: "flex-end",
-        maxWidth: "82%",
-        padding: "11px 15px",
-        borderRadius: "20px 20px 6px 20px",
-        background: "var(--sky)",
-        color: "var(--text-on-sky)",
-        fontSize: 15,
-        lineHeight: 1.5,
-        animation: "bubbleIn 320ms var(--ease-soft) both",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
-function ThinkingDots() {
-  return (
-    <div
-      style={{
-        alignSelf: "flex-start",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "14px 16px",
-        borderRadius: "20px 20px 20px 6px",
-        background: "var(--sunken)",
-      }}
-      aria-label="在想"
-    >
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          style={{
-            display: "block",
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "var(--ink-blue)",
-            opacity: 0.55,
-            animation: `think 1.3s ease-in-out ${i * 0.18}s infinite`,
-          }}
-        />
-      ))}
     </div>
   );
 }

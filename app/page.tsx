@@ -9,6 +9,7 @@ import F3Draft from "@/components/frames/F3Draft";
 import F4Sandplay from "@/components/frames/F4Sandplay";
 import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
+import Premiere from "@/components/frames/Premiere";
 import Reflect from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
 import Profile from "@/components/frames/Profile";
@@ -20,14 +21,15 @@ import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updat
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
- * 新故事:F1 Home → F2 Listening → **Reflect 阶段一(旁观者陪聊)** → Pick 选带入角色
- *        → F4 Sandplay 阶段二(草稿先行)→ F3 Keep 页 → 入长廊回 Home;F1 ↔ F5
+ * 新故事:F1 Home → F2 Listening → Reflect 等候室(等 VLM 回信,占位符区)→ 幕布拉开
+ *        → Premiere 首映(先看演绎视频)→ Pick 选带入角色 → F4 Sandplay 群聊
+ *        → F3 Keep 页 → 入长廊回 Home;F1 ↔ F5
  * 阶段一同时并行做解构(建 session / 触发视频任务 / 提取人设),结果经 handleReflected
  * 传给 PickRole —— 不要在 PickRole 里再请求一次,那会另起一个视频任务。
  * Home → Listening 为直接跳帧(2026-08-29:移除 T1 小人飞行过场,产品确认纯跳转)
  */
 
-type Frame = "auth" | "home" | "listening" | "reflect" | "pick" | "draft" | "sandplay" | "spaces" | "profile" | "storyDetail";
+type Frame = "auth" | "home" | "listening" | "reflect" | "premiere" | "pick" | "draft" | "sandplay" | "spaces" | "profile" | "storyDetail";
 
 /** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
 const DEMO_SKIP_KEY = "lilili.demo.skip";
@@ -44,15 +46,17 @@ function Shell() {
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
   /** storyDetail 的数据来源:自己的历史(store)/ 社区故事(mock) */
   const [detailSource, setDetailSource] = useState<"mine" | "community">("mine");
-  /** 幕布拉开转场:等候室就绪 → 进场那一刻挂起,动画结束自卸 */
+  /** 幕布拉开转场:等候室拆回信那一刻挂起,动画结束自卸 */
   const [curtain, setCurtain] = useState(false);
+  /** 首映页要播的演绎视频地址(等候室等 VLM 拿到;mock/失败为 null) */
+  const [premiereUrl, setPremiereUrl] = useState<string | null>(null);
 
   /* 启动:无 token → auth 帧;已登录 → home。
      调试/演示捷径 ?frame=listening|pick|draft|sandplay|spaces 优先于登录态,直达任意帧 */
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("frame");
     if (f && f !== "home") {
-      if (f === "draft" || f === "pick" || f === "reflect") setTranscript(MOCK_TRANSCRIPT);
+      if (f === "draft" || f === "pick" || f === "reflect" || f === "premiere") setTranscript(MOCK_TRANSCRIPT);
       setFrame(f as Frame);
       return;
     }
@@ -81,6 +85,7 @@ function Shell() {
     setPersona(null);
     setCastPersonas(null);
     setPrepared(null);
+    setPremiereUrl(null);
     setFrame("listening");
   };
 
@@ -99,9 +104,10 @@ function Shell() {
     setFrame("reflect");
   };
 
-  /* 阶段一结束(场景就绪):把解构结果带进选角,session 信息落到草稿上 */
-  const handleReflected = (result: PreparedSandplay) => {
+  /* 阶段一结束(回信抵达、用户拆开):幕布拉开 → 首映页先看演绎视频,看完进选角 */
+  const handleReflected = (result: PreparedSandplay, playbackUrl: string | null) => {
     setPrepared(result);
+    setPremiereUrl(playbackUrl);
     if (result.session) {
       setPending((current) =>
         current
@@ -113,8 +119,8 @@ function Shell() {
           : current
       );
     }
-    setCurtain(true); // 舞台幕布向两侧拉开,露出幕后的角色阵容
-    setFrame("pick");
+    setCurtain(true); // 舞台幕布向两侧拉开,露出首映银幕
+    setFrame("premiere");
   };
 
   /* 沙盘结束 → Keep 页确认（标题/封面/可见性）→ 入长廊回 Home */
@@ -151,6 +157,7 @@ function Shell() {
     setPersona(null);
     setCastPersonas(null);
     setPrepared(null);
+    setPremiereUrl(null);
     backHome();
   };
 
@@ -199,6 +206,9 @@ function Shell() {
           onReady={handleReflected}
           onBack={discardPending}
         />
+      )}
+      {frame === "premiere" && (
+        <Premiere playbackUrl={premiereUrl} onBack={discardPending} onDone={() => setFrame("pick")} />
       )}
       {frame === "pick" && <PickRole transcript={pending?.transcript ?? transcript} prepared={prepared} onBack={discardPending} onPick={(p, all, session) => {
         setPersona(p);
