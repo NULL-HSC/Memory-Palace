@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import type { CharacterId, StoryComment } from "@/lib/types";
 import { CharacterFace, Companion, type FaceId } from "../characters";
 import { characterById } from "@/lib/mock/characters";
-import { CoverArt } from "../ui";
+import StoryPlayer from "../ui/StoryPlayer";
 import ChatInput from "../ui/ChatInput";
 
 /**
@@ -97,17 +97,18 @@ export default function StoryDetail({
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", marginTop: 18, paddingBottom: 12 }}>
         {/* 封面卡(裱卡手法,同长廊) */}
         <div
+          className="card-frame"
           style={{
-            background: "var(--raised)",
             borderRadius: "var(--r-panel)",
             padding: "12px 12px 16px",
             boxShadow: "var(--lift-2)",
           }}
         >
-          <div style={{ position: "relative", height: 170, borderRadius: "var(--r-photo)", overflow: "hidden" }}>
-            <CoverArt cover={cover} />
-            {/* 凹槽内阴影:封面读作裱进框里的照片(同社区卡配方) */}
-            <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)", pointerEvents: "none" }} />
+          <div style={{ position: "relative", aspectRatio: "16 / 9", borderRadius: "var(--r-photo)", overflow: "hidden", background: "var(--mist)" }}>
+            {/* 故事演绎视频:播放器交互同首映页;mock 阶段统一放 demo 片 */}
+            <StoryPlayer src="/videos/demo.mp4" poster={cover.startsWith("/") ? cover : undefined} />
+            {/* 凹槽内阴影:压在画面上,读作裱进框里的真照片(不挡播放交互) */}
+            <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)", pointerEvents: "none", zIndex: 2 }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 12, padding: "0 2px" }}>
             <span style={{ fontFamily: "var(--font-hand)", fontSize: 21, color: "var(--ink-blue)" }}>{title}</span>
@@ -120,9 +121,9 @@ export default function StoryDetail({
 
         {/* 故事原文(信纸手法) */}
         <div
+          className="card-frame"
           style={{
             marginTop: 16,
-            background: "var(--raised)",
             borderRadius: "var(--r-panel)",
             padding: "18px 16px",
             boxShadow: "var(--lift-1)",

@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getPlaybackUrl, getSessionStatus, prepareSandplay, type PreparedSandplay } from "@/lib/api";
 import { Companion } from "../characters";
-import { ClosedCurtainBackdrop } from "../scene/Curtain";
 import HeadMatch, { type ClearInfo } from "../game/HeadMatch";
 import { createQuoteDeck, type MindfulQuote } from "@/lib/mindful-quotes";
 
@@ -27,7 +26,7 @@ const MOCK_VIDEO_MS = 4200; // 本地演示:模拟 VLM 生成耗时
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** 轮询后端 session 直到视频就绪,返回播放地址;失败/超时抛错(与 SandplayStage 同一套状态约定) */
-async function waitForVideoPlayback(sessionId: string): Promise<string> {
+export async function waitForVideoPlayback(sessionId: string): Promise<string> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const session = await getSessionStatus(sessionId);
     const status = session.video.status.toLowerCase();
@@ -134,16 +133,11 @@ export default function Reflect({
         <span className="nav-side" />
       </div>
 
-      {/* 顶部:闭合的舞台口 + 挂在幕前的「一句话」牌子(companion 念给你听) */}
-      <div style={{ position: "relative", marginTop: 14, flexShrink: 0, height: 138 }}>
-        <ClosedCurtainBackdrop height={98} />
+      {/* 顶部:挂在等候室上方的「一句话」牌子(companion 念给你听) */}
+      <div style={{ marginTop: 14, flexShrink: 0 }}>
         <div
           className="card-frame"
           style={{
-            position: "absolute",
-            left: 6,
-            right: 6,
-            bottom: 0,
             minHeight: 82,
             borderRadius: "var(--r-panel)",
             boxShadow: "var(--lift-2)",

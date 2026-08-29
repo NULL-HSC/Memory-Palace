@@ -377,6 +377,9 @@ export default function HeadMatch({
   const boardW = tile * COLS;
   const boardH = tile * ROWS;
 
+  /** 棋子之间的呼吸缝:格子边长的 12%,布局松一点 */
+  const GAP = tile ? Math.max(4, Math.round(tile * 0.12)) : 0;
+
   return (
     <div
       ref={boxRef}
@@ -422,10 +425,10 @@ export default function HeadMatch({
                 aria-label={HEAD_ART[cell.face].label}
                 onPointerDown={onPointerDown(r, c)}
                 style={{
-                  left: c * tile,
-                  top: r * tile,
-                  width: tile,
-                  height: tile,
+                  left: c * tile + GAP / 2,
+                  top: r * tile + GAP / 2,
+                  width: tile - GAP,
+                  height: tile - GAP,
                   zIndex: cell.clearing ? 3 : isSel ? 4 : 2,
                   transform: cell.clearing ? "scale(0.26) rotate(10deg)" : isSel ? "scale(1.07)" : "none",
                   opacity: cell.clearing ? 0 : 1,

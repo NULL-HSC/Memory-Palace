@@ -10,14 +10,14 @@ import F4Sandplay from "@/components/frames/F4Sandplay";
 import F5Spaces from "@/components/frames/F5Spaces";
 import PickRole from "@/components/frames/PickRole";
 import Premiere from "@/components/frames/Premiere";
-import Reflect from "@/components/frames/Reflect";
+import Reflect, { waitForVideoPlayback } from "@/components/frames/Reflect";
 import Auth from "@/components/frames/Auth";
 import Profile from "@/components/frames/Profile";
 import StoryDetail from "@/components/frames/StoryDetail";
 import { MOCK_TRANSCRIPT } from "@/lib/mock/transcript";
 import { CurtainVeil } from "@/components/scene/Curtain";
 import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/community";
-import { USE_BACKEND, hasAccessToken, logout as apiLogout, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
+import { USE_BACKEND, hasAccessToken, logout as apiLogout, prepareSandplay, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
 /**
  * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
@@ -43,6 +43,15 @@ function Shell() {
   const [persona, setPersona] = useState<Persona | null>(null); // 用户选择带入的角色
   const [castPersonas, setCastPersonas] = useState<Persona[] | null>(null); // 故事 Top 3 完整阵容
   const [prepared, setPrepared] = useState<PreparedSandplay | null>(null); // 阶段一并行准备好的解构结果
+  /** 后台生成中的故事:用户在等候室提前离开时挂上;生成完成 → 首页出「未读」卡,点了续进首映 */
+  const [genTask, setGenTask] = useState<{
+    id: string;
+    transcript: string;
+    prepared: PreparedSandplay | null;
+    playbackUrl: string | null;
+    ready: boolean;
+    unread: boolean;
+  } | null>(null);
   const [homeEnter, setHomeEnter] = useState<"frame-enter-left" | "frame-enter">("frame-enter-left");
   /** storyDetail 的数据来源:自己的历史(store)/ 社区故事(mock) */
   const [detailSource, setDetailSource] = useState<"mine" | "community">("mine");
@@ -148,6 +157,7 @@ function Shell() {
     setPersona(null);
     setCastPersonas(null);
     setPrepared(null);
+    setGenTask(null); // Keep 完成,后台任务闭环
     backHome();
   };
 
@@ -158,7 +168,62 @@ function Shell() {
     setCastPersonas(null);
     setPrepared(null);
     setPremiereUrl(null);
+    setGenTask(null); // "Let it go" = 连后台生成中的也不要了
     backHome();
+  };
+
+  /** 等候室提前退出 → 故事转后台继续生成;首页挂「生成中」卡,好了变「未读」 */
+  const handleReflectLeave = () => {
+    const text = pending?.transcript ?? transcript;
+    if (!text) {
+      discardPending();
+      return;
+    }
+    const taskId = `gen-${Date.now()}`;
+    setGenTask({ id: taskId, transcript: text, prepared: null, playbackUrl: null, ready: false, unread: false });
+    void (async () => {
+      try {
+        const p = await prepareSandplay(text);
+        let url: string | null = null;
+        if (p.session) {
+          try {
+            url = await waitForVideoPlayback(p.session.session_id);
+          } catch (error) {
+            console.error("[genTask] 视频等待失败,首映走兜底:", error);
+          }
+        } else {
+          await new Promise((r) => setTimeout(r, 4200)); // 本地演示:与等候室同款模拟耗时
+        }
+        setGenTask((cur) => (cur && cur.id === taskId ? { ...cur, prepared: p, playbackUrl: url, ready: true, unread: true } : cur));
+      } catch (error) {
+        console.error("[genTask] 后台生成失败:", error);
+        setGenTask((cur) => (cur && cur.id === taskId ? { ...cur, ready: true, unread: true } : cur));
+      }
+    })();
+    setPending(null);
+    setPersona(null);
+    setCastPersonas(null);
+    backHome();
+  };
+
+  /** 点「未读」卡 → 从首映接着走(和正常链路一致:首映 → 选角 → 群聊) */
+  const openGenTask = () => {
+    if (!genTask || !genTask.ready) return;
+    setPending({
+      id: "pending",
+      title: "",
+      date: "",
+      cover: "sage",
+      transcript: genTask.transcript,
+      createdAt: Date.now(),
+      backendSessionId: genTask.prepared?.session?.session_id,
+      backendVideoTaskId: genTask.prepared?.session?.video_task_id,
+    });
+    setPrepared(genTask.prepared);
+    setPremiereUrl(genTask.playbackUrl);
+    setGenTask((cur) => (cur ? { ...cur, unread: false } : cur));
+    setCurtain(true); // 同样幕布拉开进首映
+    setFrame("premiere");
   };
 
   const backHome = () => {
@@ -197,6 +262,8 @@ function Shell() {
           onNewStory={startNewStory}
           onVisitSpaces={() => setFrame("spaces")}
           onOpenProfile={() => setFrame("profile")}
+          generating={genTask ? { ready: genTask.ready, unread: genTask.unread } : null}
+          onOpenGenerating={openGenTask}
         />
       )}
       {frame === "listening" && <F2Listening onBack={backHome} onDone={handleListened} />}
@@ -204,7 +271,7 @@ function Shell() {
         <Reflect
           transcript={pending?.transcript ?? transcript}
           onReady={handleReflected}
-          onBack={discardPending}
+          onBack={handleReflectLeave}
         />
       )}
       {frame === "premiere" && (

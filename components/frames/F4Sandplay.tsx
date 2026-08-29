@@ -6,7 +6,7 @@ import { NARRATOR_ID } from "@/lib/types";
 import { runTurn, transcribeAudio, type TurnMode } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
 import { TypeText, Waveform } from "../ui";
-import SandplayStage from "../scene/SandplayStage";
+import StoryPlayer from "../ui/StoryPlayer";
 import ChatInput from "../ui/ChatInput";
 
 /**
@@ -212,7 +212,7 @@ export default function F4Sandplay({
     void runRound("answer", aiSpeakersRef.current, waitForUser, text);
   };
 
-  const stageSpeaker = streaming?.speakerId ?? typingId ?? null;
+
 
   /* ── 语音发言(coding-agent 式:点 mic → 输入条变实时录音条;再点 → 转写落进输入框,
      用户确认/修改后再手动发送;转写走真接口 transcribeAudio,失败提示不挡路) ── */
@@ -312,8 +312,8 @@ export default function F4Sandplay({
             <stop offset="100%" stopColor="var(--sky)" />
           </linearGradient>
         </defs>
-        <path d="M0 0 H390 V40 Q370 62 348 46 Q326 32 306 44 Q286 56 262 42 Q238 28 216 42 Q194 54 168 40 Q142 26 118 42 Q94 54 70 42 Q46 30 22 44 Q10 52 0 40 Z" fill="url(#roomBandG)" />
-        <path d="M390 34 Q370 56 348 40 Q326 26 306 38 Q286 50 262 36 Q238 22 216 36 Q194 48 168 34 Q142 20 118 36 Q94 48 70 36 Q46 24 22 38 Q10 46 0 34" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+        <path d="M0 20 Q0 0 20 0 H370 Q390 0 390 20 V46 Q364 70 338 70 T286 46 Q260 70 234 70 T182 46 Q156 70 130 70 T78 46 Q52 70 26 70 T0 52 Z" fill="url(#roomBandG)" />
+        <path d="M390 40 Q364 64 338 64 T286 40 Q260 64 234 64 T182 40 Q156 64 130 64 T78 40 Q52 64 26 64 T0 46" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
       </svg>
 
       {/* ══ 内容层 ══ */}
@@ -389,9 +389,8 @@ export default function F4Sandplay({
                 background: "var(--mist)",
               }}
             >
-              <div style={{ position: "absolute", inset: 0 }}>
-                <SandplayStage cast={castList} speakerId={stageSpeaker} title={story.title} sessionId={story.backendSessionId} />
-              </div>
+              {/* 与首映同款播放器(StoryPlayer);本地演示统一 demo 片,真后端换 playbackUrl */}
+              <StoryPlayer src="/videos/demo.mp4" />
               <span
                 aria-hidden
                 style={{
@@ -399,22 +398,11 @@ export default function F4Sandplay({
                   inset: 0,
                   boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)",
                   pointerEvents: "none",
+                  zIndex: 2,
                 }}
               />
             </div>
-            {/* 底 mat:进度条(装饰,真视频接入后联动) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 2px 11px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-blue)", flexShrink: 0 }} />
-              <span style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(18,85,113,0.25)" }} />
-              <span style={{ fontSize: 11, color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>0:00 / 0:00</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-              </svg>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-blue)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h-3" />
-              </svg>
-            </div>
+
           </div>
 
           {messages.map((m) =>
