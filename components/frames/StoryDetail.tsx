@@ -5,6 +5,7 @@ import type { CharacterId, StoryComment } from "@/lib/types";
 import { CharacterFace, Companion, type FaceId } from "../characters";
 import { characterById } from "@/lib/mock/characters";
 import { CoverArt } from "../ui";
+import ChatInput from "../ui/ChatInput";
 
 /**
  * 故事详情 · 只读(2026-08-29 产品确认)
@@ -68,6 +69,7 @@ export default function StoryDetail({
 }) {
   const [comments, setComments] = useState<StoryComment[]>(initialComments);
   const [draft, setDraft] = useState("");
+  const [composing, setComposing] = useState(false); // 先「写留言」按钮,点了才展开输入条
 
   const leaveComment = () => {
     const text = draft.trim();
@@ -99,11 +101,13 @@ export default function StoryDetail({
             background: "var(--raised)",
             borderRadius: "var(--r-panel)",
             padding: "12px 12px 16px",
-            boxShadow: "var(--shadow-print-mid)",
+            boxShadow: "var(--lift-2)",
           }}
         >
           <div style={{ position: "relative", height: 170, borderRadius: "var(--r-photo)", overflow: "hidden" }}>
             <CoverArt cover={cover} />
+            {/* 凹槽内阴影:封面读作裱进框里的照片(同社区卡配方) */}
+            <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)", pointerEvents: "none" }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 12, padding: "0 2px" }}>
             <span style={{ fontFamily: "var(--font-hand)", fontSize: 21, color: "var(--ink-blue)" }}>{title}</span>
@@ -172,36 +176,35 @@ export default function StoryDetail({
         </div>
       </div>
 
-      {/* 别人的故事才给留言输入框;自己的历史纯只读 */}
+      {/* 别人的故事:先一个「写留言」按钮,点开才是输入条(与群聊同款 ChatInput);自己的历史纯只读 */}
       {canComment && (
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, flexShrink: 0, paddingTop: 10 }}>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") leaveComment();
-            }}
-            placeholder="留一句话吧…"
-            aria-label="写留言"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: "none",
-              borderBottom: "1px solid var(--line-strong)",
-              background: "transparent",
-              fontSize: 15,
-              padding: "8px 0",
-              color: "var(--ink)",
-            }}
-          />
-          <button
-            onClick={leaveComment}
-            className="btn btn--sky"
-            style={{ minHeight: 38, padding: "0 18px", fontSize: 14 }}
-            disabled={!draft.trim()}
-          >
-            送出
-          </button>
+        <div style={{ flexShrink: 0, paddingTop: 10 }}>
+          {composing ? (
+            <ChatInput
+              value={draft}
+              onChange={setDraft}
+              onSend={leaveComment}
+              placeholder="留一句话吧…"
+              autoFocus
+              ariaLabel="写留言"
+            />
+          ) : (
+            <button
+              onClick={() => setComposing(true)}
+              style={{
+                width: "100%",
+                minHeight: 46,
+                borderRadius: 23,
+                border: "1.5px dashed var(--slot-border)",
+                background: "var(--raised)",
+                fontSize: 14,
+                fontStyle: "italic",
+                color: "var(--faint)",
+              }}
+            >
+              写一句留言…
+            </button>
+          )}
         </div>
       )}
     </div>
