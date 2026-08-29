@@ -17,8 +17,19 @@ const VARIANTS = {
 
 export type PrintVariant = keyof typeof VARIANTS;
 
-/** 占位封面（spec §5：hand-drawn stand-in，正式封面交付后替换；像素取自 mockup） */
+/** 占位封面（spec §5：hand-drawn stand-in，正式封面交付后替换；像素取自 mockup）
+ *  cover 以 "/" 开头时按图片路径渲染（真实封面图），否则用内置 SVG 占位 */
 export function CoverArt({ cover }: { cover: string }) {
+  if (cover.startsWith("/")) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={cover}
+        alt=""
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
+    );
+  }
   if (cover === "blush")
     return (
       <svg viewBox="0 0 178 211" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} aria-hidden>
@@ -93,6 +104,17 @@ export function MountedPrint({
         }}
       >
         <CoverArt cover={cover ?? "sage"} />
+        {/* 内框内阴影:照片区微微凹陷,卡片更立体 */}
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: 6,
+            boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)",
+            pointerEvents: "none",
+          }}
+        />
       </span>
       {caption && (
         <span
@@ -110,6 +132,7 @@ export function MountedPrint({
             style={{
               display: "block",
               fontSize: variant === "edge" ? 15 : 21,
+              fontWeight: 600,
               lineHeight: 1.2,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -119,7 +142,7 @@ export function MountedPrint({
             {caption}
           </span>
           {date && (
-            <span style={{ display: "block", fontSize: 11, marginTop: 2, color: "rgba(23,106,145,0.7)" }}>
+            <span style={{ display: "block", fontSize: 11, marginTop: 2, color: "rgba(15,45,66,0.7)" }}>
               {date}
             </span>
           )}
@@ -129,19 +152,31 @@ export function MountedPrint({
   );
 }
 
-/** 空白 mount（扇形 −2 槽位 / 空态占位） */
+/** 空白拍立得（扇形末尾的「+」槽位）:和其他卡同款裱框,照片区是格子纹,表示待添加 */
 export function BlankMount({ style }: { style?: React.CSSProperties }) {
   return (
     <div
-      className="gingham"
       style={{
-        width: VARIANTS.edge.w,
-        height: VARIANTS.edge.h,
+        width: VARIANTS.focused.w,
+        height: VARIANTS.focused.h,
+        background: "var(--raised)",
         border: "none",
-        borderRadius: 18,
+        borderRadius: "var(--r-panel)",
+        padding: VARIANTS.focused.pad,
+        boxShadow: "var(--shadow-print-mid)",
         ...style,
       }}
-    />
+    >
+      <span
+        className="gingham"
+        style={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          borderRadius: 6,
+        }}
+      />
+    </div>
   );
 }
 

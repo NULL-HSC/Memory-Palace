@@ -6,7 +6,7 @@ export const SEED_STORIES: Story[] = [
     id: "seed-1",
     title: "鼓起勇气的一天",
     date: "2024年6月12日",
-    cover: "sage",
+    cover: "/covers/courage.png",
     transcript:
       "今天开会我终于把话说出来了。手一直在抖,但憋了好几周的那句话,我说出口了。没有人笑我。其实,有两个人还点了点头。",
     createdAt: new Date("2024-06-12T20:30:00").getTime(),

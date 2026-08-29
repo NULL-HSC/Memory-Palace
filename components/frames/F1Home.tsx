@@ -47,7 +47,7 @@ export default function F1Home({
   const { stories } = useStore();
   const [front, setFront] = useState(0); // 只在吸附/点按时变化 → 标题联动
   const story = stories[front];
-  const maxOffset = Math.max(stories.length - 1, 0);
+  const maxOffset = stories.length; // 边界含末尾的空白「+」卡:它可以被滑到最前并点按
 
   const offsetRef = useRef(0);
   const dragRef = useRef({ startX: 0, startOffset: 0, moved: 0, active: false, tapIdx: null as number | null });
@@ -137,25 +137,24 @@ export default function F1Home({
       {/* ══ 顶部:雾蓝波浪布带(2.5D 渐变:上浅蓝→波浪沿深蓝;不规则波;轻微外投影) ══ */}
       <svg
         aria-hidden
-        viewBox="0 0 390 120"
+        viewBox="0 0 390 170"
         preserveAspectRatio="none"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 120, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 170, pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
       >
         <defs>
           <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--mist)" />
-            <stop offset="55%" stopColor="var(--mist)" />
             <stop offset="100%" stopColor="var(--sky)" />
           </linearGradient>
         </defs>
-        {/* 不规则波浪下沿:每个波的宽度/深度都不一样,像布帘自然垂坠 */}
+        {/* 不规则波浪下沿:布面加厚(波形整体上移 30px),每个波的宽度/深度都不一样 */}
         <path
-          d="M0 0 H390 V46 Q370 72 348 54 Q326 36 306 50 Q286 66 262 48 Q238 30 216 46 Q194 62 168 44 Q142 26 118 44 Q94 62 70 46 Q46 30 22 48 Q10 60 0 46 Z"
+          d="M0 0 H390 V106 Q370 132 348 114 Q326 96 306 110 Q286 126 262 108 Q238 90 216 106 Q194 122 168 104 Q142 86 118 104 Q94 122 70 106 Q46 90 22 108 Q10 120 0 106 Z"
           fill="url(#bandG)"
         />
         {/* 虚线车缝:沿同一条不规则波浪,上移 8px */}
         <path
-          d="M390 38 Q370 64 348 46 Q326 28 306 42 Q286 58 262 40 Q238 22 216 38 Q194 54 168 36 Q142 18 118 36 Q94 54 70 38 Q46 22 22 40 Q10 52 0 38"
+          d="M390 98 Q370 124 348 106 Q326 88 306 102 Q286 118 262 100 Q238 82 216 98 Q194 114 168 96 Q142 78 118 96 Q94 114 70 98 Q46 82 22 100 Q10 112 0 98"
           fill="none"
           stroke="var(--ink-blue)"
           strokeOpacity="0.4"
@@ -166,7 +165,7 @@ export default function F1Home({
       </svg>
 
       {/* header:进横条;只留 Visit 入口(实心按钮) */}
-      <div style={{ position: "relative", zIndex: 103, display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "22px var(--screen-x) 0" }}>
+      <div style={{ position: "relative", zIndex: 103, display: "flex", justifyContent: "flex-end", alignItems: "center", padding: "30px var(--screen-x) 0" }}>
         <button
           onClick={onVisitSpaces}
           className="btn btn--sky"
@@ -201,7 +200,7 @@ export default function F1Home({
             style={{
               position: "absolute",
               left: "50%",
-              top: "38%",
+              top: "42%",
               transform: "translate(-50%, -50%) rotate(-1.5deg)",
               width: 198,
               height: 255,
@@ -260,7 +259,7 @@ export default function F1Home({
                 style={{
                   position: "absolute",
                   left: "50%",
-                  top: "38%",
+                  top: "42%",
                   transform: t.transform,
                   opacity: t.opacity,
                   zIndex: t.zIndex,
@@ -289,7 +288,7 @@ export default function F1Home({
             style={{
               position: "absolute",
               left: "50%",
-              top: "38%",
+              top: "42%",
               ...(() => {
                 const t = fan(stories.length - offsetRef.current);
                 return { transform: t.transform, opacity: t.opacity, zIndex: t.zIndex, visibility: t.visible ? ("visible" as const) : ("hidden" as const) };
@@ -331,7 +330,7 @@ export default function F1Home({
                 width="26"
                 height="150"
                 viewBox="0 0 26 150"
-                style={{ position: "absolute", left: `calc(50% + ${dx}px - 13px)`, top: "calc(38% - 320px)", zIndex: 101, pointerEvents: "none" }}
+                style={{ position: "absolute", left: `calc(50% + ${dx}px - 13px)`, top: "calc(42% - 320px)", zIndex: 101, pointerEvents: "none" }}
               >
                 {/* 挂绳:从布带底下一路垂到夹子 */}
                 <line x1="13" y1="0" x2="13" y2="117" stroke="var(--story)" strokeWidth="1.8" />
