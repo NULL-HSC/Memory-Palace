@@ -7,7 +7,7 @@ import "./globals.css";
  * CJK 无手写字形,中文标题回落 PingFang SC 700(kit §2.2 规则)。
  */
 export const metadata: Metadata = {
-  title: "理理理 — a quiet place for your day",
+  title: "Answer Land — a quiet place for your day",
   description: "Speak your day. Keep the story. Let the room talk it through.",
 };
 

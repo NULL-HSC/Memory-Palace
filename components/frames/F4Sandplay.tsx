@@ -469,7 +469,7 @@ export default function F4Sandplay({
   return (
     <div className="frame frame-enter" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
       {/* ══ 顶部:雾蓝波浪布条(短版,同 Home 的手法) ══ */}
-      <svg aria-hidden viewBox="0 0 390 76" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 76", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}>
+      <svg aria-hidden viewBox="0 0 390 76" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 76", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}>
         <defs>
           <linearGradient id="roomBandG" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#EAF6FB" />
@@ -477,8 +477,8 @@ export default function F4Sandplay({
             <stop offset="100%" stopColor="var(--sky)" />
           </linearGradient>
         </defs>
-        <path d="M0 20 Q0 0 20 0 H370 Q390 0 390 20 V46 Q364 70 338 70 T286 46 Q260 70 234 70 T182 46 Q156 70 130 70 T78 46 Q52 70 26 70 T0 52 Z" fill="url(#roomBandG)" />
-        <path d="M390 40 Q364 64 338 64 T286 40 Q260 64 234 64 T182 40 Q156 64 130 64 T78 40 Q52 64 26 64 T0 46" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
+        <path d="M0 0 H390 V40 Q370 62 348 46 Q326 32 306 44 Q286 56 262 42 Q238 28 216 42 Q194 54 168 40 Q142 26 118 42 Q94 54 70 42 Q46 30 22 44 Q10 52 0 40 Z" fill="url(#roomBandG)" />
+        <path d="M390 34 Q370 56 348 40 Q326 26 306 38 Q286 50 262 36 Q238 22 216 36 Q194 48 168 34 Q142 20 118 36 Q94 48 70 36 Q46 24 22 38 Q10 46 0 34" fill="none" stroke="var(--ink-blue)" strokeOpacity="0.4" strokeWidth="1.3" strokeDasharray="5 6" strokeLinecap="round" />
       </svg>
 
       {/* ══ 内容层 ══ */}
@@ -540,6 +540,8 @@ export default function F4Sandplay({
             display: "flex",
             flexDirection: "column",
             gap: 12,
+            WebkitMaskImage: "linear-gradient(180deg, transparent 0, black 56px)",
+            maskImage: "linear-gradient(180deg, transparent 0, black 56px)",
           }}
         >
           {/* 放映卡:拍立得形式(渐变描边卡 + 裱框内阴影 + 底 mat 进度条),全局一致 */}
@@ -566,6 +568,24 @@ export default function F4Sandplay({
                   zIndex: 2,
                 }}
               />
+            </div>
+            {/* 底 mat:淡蓝白格纹(与首映放映卡同款,完整收边) */}
+            <div
+              style={{
+                margin: "10px -10px 0",
+                padding: "10px 12px 11px",
+                borderRadius: "0 0 var(--r-panel) var(--r-panel)",
+                textAlign: "center",
+                backgroundColor: "var(--cream)",
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px), repeating-linear-gradient(90deg, rgba(47,159,200,0.12) 0 13px, transparent 13px 26px)",
+              }}
+            >
+              {story.title ? (
+                <span style={{ fontFamily: "var(--font-hand)", fontSize: 18, fontWeight: 600, color: "var(--ink-blue)" }}>{story.title}</span>
+              ) : (
+                <span className="meta-italic" style={{ fontSize: 12 }}>这个故事的沙盘演绎</span>
+              )}
             </div>
 
           </div>

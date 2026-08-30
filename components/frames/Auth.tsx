@@ -161,7 +161,7 @@ export default function Auth({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0 }}>
         <div>
           <span className="ribbon" style={{ transform: "rotate(-1.5deg)" }}>
-            理理理 lilili
+            Answer Land
           </span>
           <div className="meta-italic" style={{ marginTop: 10 }}>
             每个故事都有一个房间

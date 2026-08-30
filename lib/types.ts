@@ -1,4 +1,4 @@
-/** 数据模型 — 理理理.md §9 */
+/** 数据模型 — product-flow.md §9 */
 
 export type CharacterId = "pico" | "mira" | "renn" | "tola" | "sena" | "ivo" | "user";
 
@@ -6,8 +6,9 @@ export interface Story {
   id: string;
   title: string; // LLM 建议，可编辑
   date: string; // 展示用长日期，如 "the twelfth of June, 2024"
-  cover: string; // 占位封面 id（后续换正式设计）
+  cover: string; // 封面图路径
   transcript: string; // 完整转写
+  video?: string; // 演绎视频路径;无则兜底 /videos/demo.mp4
   reflection?: string; // F3 可选反思输入
   visibility?: "private" | "friends" | "community"; // Keep 时选择：仅自己 / 朋友 / 公开
   createdAt: number;
@@ -112,6 +113,7 @@ export interface CommunityStory {
   title: string;
   date: string;
   cover: string;
+  video?: string; // 演绎视频路径;无则兜底 /videos/demo.mp4
   excerpt: string; // 信息流里展示的一小段
   transcript: string;
   comments: StoryComment[];

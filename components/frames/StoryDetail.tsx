@@ -48,6 +48,7 @@ export default function StoryDetail({
   title,
   date,
   cover,
+  video,
   transcript,
   reflection,
   visibility,
@@ -59,6 +60,7 @@ export default function StoryDetail({
   title: string;
   date: string;
   cover: string;
+  video?: string; // 该故事的演绎视频;缺省兜底默认片
   transcript: string;
   reflection?: string;
   visibility?: "private" | "friends" | "community"; // 仅自己的故事展示
@@ -106,7 +108,7 @@ export default function StoryDetail({
         >
           <div style={{ position: "relative", aspectRatio: "16 / 9", borderRadius: "var(--r-photo)", overflow: "hidden", background: "var(--mist)" }}>
             {/* 故事演绎视频:播放器交互同首映页;mock 阶段统一放 demo 片 */}
-            <StoryPlayer src="/videos/demo.mp4" poster={cover.startsWith("/") ? cover : undefined} />
+            <StoryPlayer src={video ?? "/videos/demo.mp4"} poster={cover.startsWith("/") ? cover : undefined} />
             {/* 凹槽内阴影:压在画面上,读作裱进框里的真照片(不挡播放交互) */}
             <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 3px 10px rgba(15,45,66,0.16), inset 0 -2px 4px rgba(15,45,66,0.06)", pointerEvents: "none", zIndex: 2 }} />
           </div>

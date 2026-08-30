@@ -9,8 +9,8 @@ import { SEED_STORIES } from "./mock/stories";
  * 持久化到 localStorage；后端就绪后由 lib/api.ts 的真接口替换数据源。
  */
 
-const STORAGE_KEY = "lilili.stories.v2";
-const USER_KEY = "lilili.user.v1";
+const STORAGE_KEY = "answerland.stories.v3";
+const USER_KEY = "answerland.user.v1";
 
 const PROGRESS_PER_STORY = 1 / 6; // 每 Keep 一个故事推进一格
 

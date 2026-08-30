@@ -1,6 +1,6 @@
 import type { Character } from "../types";
 
-/** 房间常驻角色 —— 理理理.md §3；美术用 handoff assets（§5，占位 PNG，后续整体替换）
+/** 房间常驻角色 —— product-flow.md §3；美术用 handoff assets（§5，占位 PNG，后续整体替换）
  *  color = Other Spaces 卡片 field tint（handoff 05-other-spaces.html 实测值） */
 export const CHARACTERS: Character[] = [
   {

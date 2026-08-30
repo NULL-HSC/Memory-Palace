@@ -186,25 +186,25 @@ export default function F1Home({
       {/* ══ 顶部:雾蓝波浪布带(2.5D 渐变:上浅蓝→波浪沿深蓝;不规则波;轻微外投影) ══ */}
       <svg
         aria-hidden
-        viewBox="0 0 390 170"
-        preserveAspectRatio="none"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 170", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
+        viewBox="0 0 390 130"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "auto", aspectRatio: "390 / 130", pointerEvents: "none", zIndex: 102, filter: "drop-shadow(1px 2px 2px rgba(0,0,0,0.05))" }}
       >
         <defs>
           <linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--mist)" />
-            <stop offset="100%" stopColor="#B8E2F0" />
+            <stop offset="0%" stopColor="#EAF6FB" />
+            <stop offset="72%" stopColor="var(--mist)" />
+            <stop offset="100%" stopColor="var(--sky)" />
           </linearGradient>
         </defs>
-        {/* 平滑三浪 + 圆角端头(参考美术图):平缓大波浪,虚线车缝保留矢量 */}
+        {/* 不规则波浪下沿:布面加厚(波形整体上移 30px),每个波的宽度/深度都不一样 */}
         <path
-          d="M0 34 Q0 0 34 0 H356 Q390 0 390 34 V104 Q364 148 338 148 T286 104 Q260 148 234 148 T182 104 Q156 148 130 148 T78 104 Q52 148 26 148 T0 118 Z"
+          d="M0 0 H390 V76 Q370 102 348 84 Q326 66 306 80 Q286 96 262 78 Q238 60 216 76 Q194 92 168 74 Q142 56 118 74 Q94 92 70 76 Q46 60 22 78 Q10 90 0 76 Z"
           fill="url(#bandG)"
         />
-        {/* 虚线车缝:沿同一条波浪,上移 10px */}
+        {/* 虚线车缝:沿同一条不规则波浪,上移 8px */}
         <path
-          d="M0 24 Q0 -10 34 -10 H356 Q390 -10 390 24 V94 Q364 138 338 138 T286 94 Q260 138 234 138 T182 94 Q156 138 130 138 T78 94 Q52 138 26 138 T0 108"
-          transform="translate(0, 10)"
+          d="M390 68 Q370 94 348 76 Q326 58 306 72 Q286 88 262 70 Q238 52 216 68 Q194 84 168 66 Q142 48 118 66 Q94 84 70 68 Q46 52 22 70 Q10 82 0 68"
           fill="none"
           stroke="var(--ink-blue)"
           strokeOpacity="0.4"

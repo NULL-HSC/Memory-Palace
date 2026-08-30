@@ -7,7 +7,7 @@ import { MountedPrint } from "../ui";
 /**
  * F3 — 存下这个故事（沙盘对话结束之后）
  * 确认标题/封面（系统生成，标题可改）+ 选择可见性：Private / Friends / Community。
- * 零必填，只有确认。无 companion 在场 —— 整理是用户自己的时刻（理理理.md §5）。
+ * 零必填，只有确认。无 companion 在场 —— 整理是用户自己的时刻（product-flow.md §5）。
  */
 
 const COVERS = ["sage", "blush", "lavender"];
@@ -118,7 +118,7 @@ export default function F3Draft({
       {/* (2026-08-29 产品确认:储存页不再展示「你的原话」转写回顾;transcript 仍随 onKeep 保存) */}
       <div style={{ flex: 1, minHeight: 0 }} />
 
-      {/* Keep —— 零必填，始终可点（理理理.md §6 F3） */}
+      {/* Keep —— 零必填，始终可点（product-flow.md §6 F3） */}
       <button
         onClick={() =>
           onKeep({

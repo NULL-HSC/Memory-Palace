@@ -189,7 +189,7 @@ export default function F2Listening({
       console.log("[flow] F2 send skipped", { reason: !canSend ? "validation" : "settling", textLength: fullText.length, minLength: MIN_SEND_LEN });
       return;
     }
-    setSettling(true); // 寄出沉淀态:文字落定后提交(理理理.md §7)
+    setSettling(true); // 寄出沉淀态:文字落定后提交(product-flow.md §7)
     if (recording) await stopRecording();
     // 提交用户实际输入的内容(语音+打字合稿),而不是完整 mock
     settleTimerRef.current = setTimeout(() => {
