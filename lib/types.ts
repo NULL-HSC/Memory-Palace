@@ -1,4 +1,4 @@
-/** 数据模型 — 理理理.md §9 */
+/** 数据模型 — product-flow.md §9 */
 
 export type CharacterId = "pico" | "mira" | "renn" | "tola" | "sena" | "ivo" | "user";
 

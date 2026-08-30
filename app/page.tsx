@@ -20,7 +20,7 @@ import { OWN_STORY_COMMENTS, communityStoryById, memberById } from "@/lib/mock/c
 import { USE_BACKEND, hasAccessToken, logout as apiLogout, prepareSandplay, setAccessToken, updateSessionVisibility, type PreparedSandplay } from "@/lib/api";
 
 /**
- * 单页帧状态机（理理理.md §2 主循环 + §7 转场规格）
+ * 单页帧状态机（product-flow.md §2 主循环 + §7 转场规格）
  * 新故事:F1 Home → F2 Listening → Reflect 等候室(等 VLM 回信,占位符区)→ 幕布拉开
  *        → Premiere 首映(先看演绎视频)→ Pick 选带入角色 → F4 Sandplay 群聊
  *        → F3 Keep 页 → 入长廊回 Home;F1 ↔ F5
@@ -32,7 +32,7 @@ import { USE_BACKEND, hasAccessToken, logout as apiLogout, prepareSandplay, setA
 type Frame = "auth" | "home" | "listening" | "reflect" | "premiere" | "pick" | "draft" | "sandplay" | "spaces" | "profile" | "storyDetail";
 
 /** mock 模式下 auth 帧“一键跳过”的演示标记(demo only,真后端下不生效) */
-const DEMO_SKIP_KEY = "lilili.demo.skip";
+const DEMO_SKIP_KEY = "answerland.demo.skip";
 
 function Shell() {
   const { stories, addStory } = useStore();

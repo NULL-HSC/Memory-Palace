@@ -283,7 +283,7 @@ export function Waveform({ active }: { active: boolean }) {
   );
 }
 
-/* ================= TypeText —— 逐字流出（理理理.md §4：20–40ms/字） ================= */
+/* ================= TypeText —— 逐字流出（product-flow.md §4：20–40ms/字） ================= */
 
 export function TypeText({
   text,

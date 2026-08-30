@@ -9,11 +9,11 @@ import { Toast } from "../ui";
  * Profile — 个人资料(2026-08-29 产品确认,纯前端 mock)
  * 入口:Home 右下角 companion(product-flow 既定:点 companion → 数字人资料编辑)。
  * 三块:用户信息 / 数字人资料(角色特征 + 记忆,生成数字人的数据源)/ 安全设置(改绑手机号 + 退出登录)。
- * 持久化:localStorage「lilili.profile.v1」;改绑手机号与退出登录的后端接口就绪后,
+ * 持久化:localStorage「answerland.profile.v1」;改绑手机号与退出登录的后端接口就绪后,
  * 只把标注 mock 的两段换成 lib/api 调用,组件结构不变。
  */
 
-const PROFILE_KEY = "lilili.profile.v1";
+const PROFILE_KEY = "answerland.profile.v1";
 const CODE_RE = /^\d{6}$/;
 
 const DEFAULT_PROFILE: ProfileData = {

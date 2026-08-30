@@ -14,7 +14,7 @@ const AVATAR_SRC: Record<FaceId, string> = {
   renn: "/avatars/av-fox.png",
   tola: "/avatars/av-bear.png",
   sena: "/avatars/av-bunny.png",
-  ivo: "/avatars/av-duck.png", // handoff 里 Ivo 是鸭；理理理 §3 写作 owl，美术交付时统一
+  ivo: "/avatars/av-duck.png", // handoff 里 Ivo 是鸭；product-flow.md §3 写作 owl，美术交付时统一
 };
 
 /** companion（用户自己的角色）：My Space 勋章 / Speak It 倾听者 */
