@@ -1,12 +1,14 @@
 import type { DialogueTurn, Persona, SpeakerTurn, Story, StoryScene } from "./types";
+import { createDemoGodfatherReply, createDemoPersonas, createDemoTurns } from "./mock/frontend-demo";
 
 /**
  * 前端统一 API 层。浏览器只访问同源 /api/*，Next.js 代理到 BACKEND_URL。
- * NEXT_PUBLIC_BACKEND_URL 仅用于标记启用真后端（后续 iOS 原生直连也会用到）。
+ * 真后端必须由 NEXT_PUBLIC_USE_BACKEND=true 显式启用。
  */
 
-export const USE_BACKEND =
-  process.env.NEXT_PUBLIC_USE_BACKEND === "true" || Boolean(process.env.NEXT_PUBLIC_BACKEND_URL);
+// The app is presentation-first by default. A backend is only contacted when
+// explicitly enabled, so a stale NEXT_PUBLIC_BACKEND_URL cannot break the demo.
+export const USE_BACKEND = process.env.NEXT_PUBLIC_USE_BACKEND === "true";
 
 const ACCESS_TOKEN_KEY = "sheniceset_access_token";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -185,11 +187,16 @@ async function requestEmptyEnvelope(
 
 /* ── 认证 ── */
 
-export const requestVerificationCode = (phone: string) =>
-  requestEnvelope<{ verification_code: string | null; expires_in_seconds: number }>(
+export const requestVerificationCode = async (phone: string) => {
+  if (!USE_BACKEND) {
+    await delay(250);
+    return { verification_code: "123456", expires_in_seconds: 300 };
+  }
+  return requestEnvelope<{ verification_code: string | null; expires_in_seconds: number }>(
     "/auth/verification-codes",
     { method: "POST", body: { phone } }
   );
+};
 
 export async function register(input: {
   phone: string;
@@ -197,12 +204,33 @@ export async function register(input: {
   username: string;
   password: string;
 }): Promise<AuthResponse> {
+  if (!USE_BACKEND) {
+    await delay(300);
+    const auth = {
+      access_token: "frontend-demo-token",
+      token_type: "bearer",
+      user: { id: "frontend-demo-user", phone: input.phone, username: input.username || "访客" },
+    };
+    setAccessToken(auth.access_token);
+    return auth;
+  }
   const auth = await requestEnvelope<AuthResponse>("/auth/register", { method: "POST", body: input });
   setAccessToken(auth.access_token);
   return auth;
 }
 
 export async function login(phone: string, password: string): Promise<AuthResponse> {
+  if (!USE_BACKEND) {
+    void password;
+    await delay(300);
+    const auth = {
+      access_token: "frontend-demo-token",
+      token_type: "bearer",
+      user: { id: "frontend-demo-user", phone, username: "访客" },
+    };
+    setAccessToken(auth.access_token);
+    return auth;
+  }
   const auth = await requestEnvelope<AuthResponse>("/auth/login", {
     method: "POST",
     body: { phone, password },
@@ -212,6 +240,10 @@ export async function login(phone: string, password: string): Promise<AuthRespon
 }
 
 export async function logout(): Promise<void> {
+  if (!USE_BACKEND) {
+    setAccessToken(null);
+    return;
+  }
   await requestEmptyEnvelope("/auth/logout", { method: "POST" });
   setAccessToken(null);
 }
@@ -219,6 +251,12 @@ export async function logout(): Promise<void> {
 /* ── 转写与会话 ── */
 
 export async function transcribeAudio(audio: Blob, filename = "recording.webm"): Promise<string> {
+  if (!USE_BACKEND) {
+    void audio;
+    void filename;
+    await delay(500);
+    return "刚才发生的事让我一直放不下。我想把自己的感受说清楚，也想知道怎样表达边界，才不会又把所有责任都揽到自己身上。";
+  }
   const form = new FormData();
   form.append("audio", audio, filename);
   const res = await fetch("/api/transcriptions", {
@@ -359,41 +397,12 @@ async function localLlm<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function getLocalPersonas(transcript: string): Promise<{ personas: Persona[]; scene?: StoryScene }> {
-  const result = await localLlm<{
-    scene?: StoryScene;
-    personas: Array<{
-      id: string;
-      name: string;
-      profile: string;
-      voice?: string;
-      stance?: string;
-      appearance?: string;
-      isUser?: boolean;
-    }>;
-  }>("/api/llm/personas", { transcript });
-  if (result.personas.length === 0) throw new Error("LLM 未提取到人设");
-  let poolIndex = 0;
-  return {
-    scene: result.scene,
-    personas: result.personas.map((persona) => ({
-      id: persona.id,
-      name: persona.name,
-      profile: persona.profile,
-      // voice/stance 一路带到群聊 prompt;appearance 留给 VLM
-      voice: persona.voice,
-      stance: persona.stance,
-      appearance: persona.appearance,
-      avatar: persona.isUser ? ME_AVATAR : AVATAR_POOL[poolIndex++ % AVATAR_POOL.length],
-    })),
-  };
-}
-
 export async function prepareSandplay(transcript: string): Promise<PreparedSandplay> {
   console.log("[api] prepareSandplay", { textLength: transcript.length, useBackend: USE_BACKEND });
   if (!USE_BACKEND) {
-    console.log("[api] prepareSandplay using local LLM; no POST /api/sessions");
-    return getLocalPersonas(transcript);
+    console.log("[api] prepareSandplay using frontend demo data; no network request");
+    await delay(450);
+    return { personas: createDemoPersonas(transcript) };
   }
   const session = await createSession(transcript);
   const result = await waitForPersonas(session.session_id);
@@ -653,19 +662,9 @@ export async function runTurn(mode: TurnMode, speakers: string[], ctx: ChatCtx):
     );
   }
 
-  console.log("[flow] runTurn using local LLM; no SSE", { mode });
-  const result = await localLlm<{ turns: SpeakerTurn[] }>("/api/llm/turn", {
-    transcript: ctx.transcript,
-    personas: ctx.cast,
-    speakers,
-    mode,
-    history: ctx.history ?? [],
-    userName: ctx.userName,
-    // 必须转发:answer 轮发起时用户这句通常还没进 history(客户端 setMessages 未重渲染),
-    // 不带上服务端就看不到用户说了什么。真后端分支走 sendSessionMessage 已另行携带。
-    userMessage: ctx.userMessage,
-  });
-  return result.turns;
+  console.log("[flow] runTurn using frontend demo data; no network request", { mode });
+  await delay(420);
+  return createDemoTurns(mode, speakers, ctx.cast, ctx.userMessage);
 }
 
 /* ── 阶段一 · 旁观者(godfather):说完故事、等 AIGC 视频期间的单人对话 ──
@@ -678,6 +677,10 @@ export async function runGodfather(
   mode: GodfatherMode,
   ctx: { transcript: string; history?: DialogueTurn[]; userMessage?: string }
 ): Promise<string> {
+  if (!USE_BACKEND) {
+    await delay(350);
+    return createDemoGodfatherReply(mode, ctx.userMessage);
+  }
   const result = await localLlm<{ text: string }>("/api/llm/godfather", {
     transcript: ctx.transcript,
     mode,

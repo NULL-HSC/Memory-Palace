@@ -5,6 +5,7 @@ import type { DialogueTurn, Persona, SpeakerTurn, Story } from "@/lib/types";
 import { NARRATOR_ID } from "@/lib/types";
 import { listMessages, runTurn, transcribeAudio, type TurnMode, USE_BACKEND } from "@/lib/api";
 import { MOCK_PERSONAS } from "@/lib/mock/personas";
+import { createDemoGroupMessages } from "@/lib/mock/frontend-demo";
 import { Waveform } from "../ui";
 import StoryPlayer from "../ui/StoryPlayer";
 import ChatInput from "../ui/ChatInput";
@@ -250,7 +251,9 @@ export default function F4Sandplay({
     aliveRef.current = true;
     queueRef.current = [];
     stopRevealingTurn();
-    setMessages([]);
+    const demoMessages = !USE_BACKEND ? createDemoGroupMessages(story.id, castList, persona?.id) : [];
+    messagesRef.current = demoMessages;
+    setMessages(demoMessages);
     setStreaming(null);
     setTypingId(null);
     setShowEnd(false);
@@ -307,7 +310,7 @@ export default function F4Sandplay({
       console.log("[flow] F4 send skipped: empty input");
       return;
     }
-    if (!USE_BACKEND || !storyRef.current.backendSessionId || !personaRef.current?.id) {
+    if (USE_BACKEND && (!storyRef.current.backendSessionId || !personaRef.current?.id)) {
       console.error("[flow] F4 send skipped: backend session/persona missing", {
         useBackend: USE_BACKEND,
         sessionId: storyRef.current.backendSessionId,
