@@ -247,7 +247,8 @@ export async function createSession(finalText: string): Promise<CreateSessionRes
 export const listSessions = (page = 1, limit = 20) =>
   requestEnvelope<PageResult<BackendSessionSummary>>(`/sessions?page=${page}&limit=${limit}`);
 
-const SESSION_COVERS = ["sage", "blush", "lavender"];
+// 历史 session 没有后端封面字段时，轮换使用 public/covers 中的假封面。
+const SESSION_COVERS = ["/covers/arc-1.png", "/covers/arc-2.png", "/covers/arc-3.png", "/covers/arc-4.png"] as const;
 
 export function sessionSummaryToStory(summary: BackendSessionSummary, index: number): Story {
   const createdAt = Date.parse(summary.created_at);
@@ -445,6 +446,10 @@ function parseSseBlock(block: string): ParsedSseEvent | null {
 const stringField = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
+// The backend may send the marker with real LF/CRLF characters or escaped newlines.
+const MESSAGE_BREAK_PATTERN = /(?:\r?\n|\\r?\\n)<MSG_BREAK>(?:\r?\n|\\r?\\n)/;
+const splitMessageParts = (text: string) => text.split(MESSAGE_BREAK_PATTERN);
+
 /**
  * 先打开 SSE，再启动 reply-run，避免极快的首个 delta 丢失。
  * role.delta 必须按 message_id 分桶，因为多角色 delta 可能交错到达。
@@ -557,7 +562,7 @@ async function collectReplyRun(
           if (speakerId) current.speakerId = speakerId;
           current.text = fullText || `${current.text}${delta || ""}`;
           byMessage.set(messageId, current);
-          const parts = current.text.split(/\n<MSG_BREAK>\n/);
+          const parts = splitMessageParts(current.text);
           while (current.breakCount < parts.length - 1) {
             const completed = parts[current.breakCount];
             if (completed) {
@@ -574,7 +579,7 @@ async function collectReplyRun(
         if (messageId && eventName.includes("message.done")) {
           const current = byMessage.get(messageId);
           if (current?.text) {
-            const parts = current.text.split(/\n<MSG_BREAK>\n/);
+            const parts = splitMessageParts(current.text);
             const finalText = parts[current.breakCount] ?? parts[parts.length - 1] ?? "";
             const turn = { speakerId: current.speakerId, text: finalText };
             finished.set(`${messageId}:${current.breakCount}`, turn);
