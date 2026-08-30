@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Waveform } from "../ui";
-import { transcribeAudio } from "@/lib/api";
+import { transcribeAudio, USE_BACKEND } from "@/lib/api";
+import { transcriptBeats } from "@/lib/mock/transcript";
 
 /**
  * F2 — 输入页(2026-08-29 交互改版)
@@ -37,6 +38,9 @@ export default function F2Listening({
   const recordedBlobRef = useRef<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
+  const [words, setWords] = useState<string[]>([]); // 本地演示(mock 语流)的转写词;真后端走真实转写不进这里
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const beatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cursorRef = useRef(0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const pRef = useRef<HTMLParagraphElement>(null);
@@ -46,6 +50,8 @@ export default function F2Listening({
   useEffect(() => {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
+      if (beatTimerRef.current) clearTimeout(beatTimerRef.current);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
       recorderRef.current?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
@@ -55,9 +61,28 @@ export default function F2Listening({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [typed]);
 
+  /** 本地演示:mock 语流逐词上屏(不请求麦克风、不调转写) */
+  const startMockBeats = () => {
+    const beats = transcriptBeats();
+    let acc = 600;
+    beats.forEach(({ word, delay }, i) => {
+      acc += delay;
+      beatTimerRef.current = setTimeout(() => setWords((w) => [...w, word]), acc);
+      void i;
+    });
+  };
+
   const startRecording = async () => {
     if (recording || settling) return;
     setError(null);
+    if (!USE_BACKEND) {
+      setStarted(true);
+      setRecording(true);
+      setWords([]);
+      startMockBeats();
+      tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -101,6 +126,13 @@ export default function F2Listening({
       : Promise.resolve<Blob | null>(null);
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    if (!USE_BACKEND) {
+      setWords((ws) => {
+        if (ws.length > 0) setTyped((t) => (t ? `${t} ` : "") + ws.join(" "));
+        return [];
+      });
+      return stopped;
+    }
     void stopped.then((blob) => {
       if (blob) {
         recordedBlobRef.current = blob;

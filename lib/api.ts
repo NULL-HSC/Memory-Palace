@@ -600,6 +600,13 @@ export async function getOssPlaybackUrl(objectKey?: string): Promise<string> {
   return data.playback_url;
 }
 
+/** 兼容封装:videoId → object_key → 短期播放地址(链路上的旧调用方沿用此名)。
+ *  本地演示(无后端 session)不会走到这里。 */
+export async function getPlaybackUrl(videoId: string): Promise<string> {
+  const source = await getVideoPlaybackSource(videoId);
+  return getOssPlaybackUrl(source.video.object_key);
+}
+
 /** 新版后端没有 title 接口，标题建议继续使用稳定的本地池。 */
 export async function suggestTitle(transcript: string): Promise<string> {
   await delay(500);
