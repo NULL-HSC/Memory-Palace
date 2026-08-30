@@ -27,10 +27,12 @@ export default function Premiere({
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [fallbackToDemo, setFallbackToDemo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   /** 本地演示:没有真后端地址时放 public/videos/demo.mp4;文件缺失/解码失败回退占位 */
-  const src = playbackUrl ?? "/videos/demo.mp4";
+  const src = fallbackToDemo || playbackUrl == null ? "/videos/demo.mp4" : playbackUrl;
+  const isDemoVideo = fallbackToDemo || playbackUrl == null;
   const fmt = (sec: number) => {
     const m = Math.floor(sec / 60);
     const ss = Math.floor(sec % 60);
@@ -151,9 +153,12 @@ export default function Premiere({
             {!failed ? (
               <>
                 <video
+                  key={src}
                   ref={videoRef}
                   src={src}
                   playsInline
+                  autoPlay={isDemoVideo}
+                  muted={isDemoVideo}
                   preload="metadata"
                   onClick={togglePlay}
                   onPlay={() => setPlaying(true)}
@@ -164,7 +169,12 @@ export default function Premiere({
                     setEnded(true);
                     setPlaying(false);
                   }}
-                  onError={() => setFailed(true)}
+                  onError={() => {
+                    // If a generated/OSS URL cannot be played, keep the
+                    // premiere slot useful by falling back to the local demo.
+                    if (!isDemoVideo) setFallbackToDemo(true);
+                    else setFailed(true);
+                  }}
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }}
                 />
                 {/* 播放/重播碟:暂停或播完时居中显示 */}

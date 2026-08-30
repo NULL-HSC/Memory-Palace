@@ -305,7 +305,9 @@ const mapPersonas = (items: BackendPersona[]): Persona[] =>
     id: persona.id,
     name: persona.name,
     profile: persona.profile,
-    avatar: persona.avatar_url || (index === 0 ? ME_AVATAR : AVATAR_POOL[(index - 1) % AVATAR_POOL.length]),
+    // Chat avatars are deliberately local and deterministic. The backend may
+    // return an avatar_url, but remote/OSS avatar URLs are not used in the UI.
+    avatar: index === 0 ? ME_AVATAR : AVATAR_POOL[(index - 1) % AVATAR_POOL.length],
   }));
 
 export async function getSessionPersonas(sessionId: string): Promise<Persona[]> {

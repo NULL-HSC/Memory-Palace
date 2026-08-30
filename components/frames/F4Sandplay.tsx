@@ -29,6 +29,15 @@ const toTurn = (storyId: string, t: SpeakerTurn): DialogueTurn => ({
   ts: Date.now(),
 });
 
+interface RevealingTurn {
+  speakerId: string;
+  target: string;
+  visible: string;
+  finalTurn: SpeakerTurn | null;
+  timer: ReturnType<typeof setTimeout> | null;
+  onFinish: (() => void) | null;
+}
+
 export default function F4Sandplay({
   story,
   persona,
@@ -65,6 +74,7 @@ export default function F4Sandplay({
   const queueRef = useRef<SpeakerTurn[]>([]);
   const runningRef = useRef(false);
   const resolverRef = useRef<(() => void) | null>(null);
+  const revealingTurnRef = useRef<RevealingTurn | null>(null);
   const aliveRef = useRef(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const aiSpeakersRef = useRef(aiSpeakers);
@@ -77,6 +87,70 @@ export default function F4Sandplay({
   messagesRef.current = messages;
   const storyRef = useRef(story);
   storyRef.current = story;
+
+  const stopRevealingTurn = () => {
+    const revealing = revealingTurnRef.current;
+    if (revealing?.timer) clearTimeout(revealing.timer);
+    revealingTurnRef.current = null;
+  };
+
+  const commitRevealedTurn = (turn: SpeakerTurn) => {
+    if (!aliveRef.current) return;
+    setStreaming(null);
+    const next = toTurn(storyRef.current.id, turn);
+    messagesRef.current = [...messagesRef.current, next];
+    setMessages((current) => [...current, next]);
+  };
+
+  const revealStreamTurn = (turn: SpeakerTurn, done: boolean, onFinish?: () => void) => {
+    let revealing = revealingTurnRef.current;
+
+    // The backend may send either deltas or the complete content in one SSE event.
+    // Keep a target snapshot and reveal it at a consistent reading pace in both cases.
+    if (!revealing || revealing.speakerId !== turn.speakerId) {
+      stopRevealingTurn();
+      revealing = {
+        speakerId: turn.speakerId,
+        target: turn.text,
+        visible: "",
+        finalTurn: null,
+        timer: null,
+        onFinish: null,
+      };
+      revealingTurnRef.current = revealing;
+    } else {
+      revealing.target = turn.text;
+    }
+
+    if (done) {
+      revealing.finalTurn = turn;
+      revealing.onFinish = onFinish ?? null;
+    }
+    setTypingId(null);
+
+    const tick = () => {
+      const current = revealingTurnRef.current;
+      if (!aliveRef.current || current !== revealing) return;
+
+      if (current.visible.length < current.target.length) {
+        const remaining = current.target.length - current.visible.length;
+        const count = Math.min(3, remaining);
+        current.visible = current.target.slice(0, current.visible.length + count);
+        setStreaming({ speakerId: current.speakerId, text: current.visible });
+      }
+
+      if (current.visible.length >= current.target.length && current.finalTurn) {
+        revealingTurnRef.current = null;
+        commitRevealedTurn(current.finalTurn);
+        current.onFinish?.();
+        return;
+      }
+
+      current.timer = setTimeout(tick, 32);
+    };
+
+    if (!revealing.timer) tick();
+  };
 
   /* ── 节奏原语 ── */
 
@@ -91,11 +165,13 @@ export default function F4Sandplay({
       await wait(1000);
       if (!aliveRef.current) break;
       setTypingId(null);
-      setStreaming(turn);
       await new Promise<void>((resolve) => {
-        resolverRef.current = resolve;
+        resolverRef.current = () => {
+          resolverRef.current = null;
+          resolve();
+        };
+        revealStreamTurn(turn, true, resolverRef.current);
       });
-      setStreaming(null);
       await wait(420);
     }
     runningRef.current = false;
@@ -134,14 +210,7 @@ export default function F4Sandplay({
         onStream: (turn, done) => {
           if (!aliveRef.current) return;
           setTypingId(done ? null : turn.speakerId);
-          if (!done) {
-            setStreaming(turn);
-            return;
-          }
-          setStreaming(null);
-          const next = toTurn(storyRef.current.id, turn);
-          messagesRef.current = [...messagesRef.current, next];
-          setMessages((current) => [...current, next]);
+          revealStreamTurn(turn, done);
         },
       });
       if (!aliveRef.current) return;
@@ -180,6 +249,7 @@ export default function F4Sandplay({
   useEffect(() => {
     aliveRef.current = true;
     queueRef.current = [];
+    stopRevealingTurn();
     setMessages([]);
     setStreaming(null);
     setTypingId(null);
@@ -205,6 +275,7 @@ export default function F4Sandplay({
     }
     return () => {
       aliveRef.current = false;
+      stopRevealingTurn();
       voiceRequestRef.current += 1;
       if (voiceTickRef.current) clearInterval(voiceTickRef.current);
       if (recorderRef.current) {
@@ -246,6 +317,7 @@ export default function F4Sandplay({
     }
     setInput("");
     // 每次用户发言都从一个全新的后端消息气泡开始，避免沿用上一轮的 streaming 状态。
+    stopRevealingTurn();
     setStreaming(null);
     setTypingId(null);
     setShowEnd(false); // 用户回来了 → 收起结束弹窗

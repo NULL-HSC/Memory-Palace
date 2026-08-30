@@ -27,7 +27,7 @@ export interface Character {
 }
 
 /** 从用户故事里提取的人设 Top 3（契约: GET /api/sessions/{id}/personas）
- *  进沙盘前用户选一个带入;avatar 为图片地址(mock 用本地 PNG,契约字段 avatar_url) */
+ *  进沙盘前用户选一个带入;avatar 为固定本地图片地址。后端的 avatar_url 仅作为兼容契约字段，不进入聊天 UI。 */
 export interface Persona {
   id: string;
   name: string;
