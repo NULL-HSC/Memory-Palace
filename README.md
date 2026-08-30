@@ -93,21 +93,20 @@ Answer Land 是一款“**毛茸茸角色转译驱动的 AI 多视角情境推�
 
 ### 当前原型界面
 
-![原型界面 1](docs/assets/proposal/exec-05a0b2f2-7249-4feb-bb84-16c405a0ecb3.png)
-
-![原型界面 2](docs/assets/proposal/img_v3_02151_2ba13185-8347-41b4-997e-49be33685d2g.png)
-
-![原型界面 3](docs/assets/proposal/exec-8879a237-e8aa-4792-b169-67dff5a3a244.png)
-
-![原型界面 4](docs/assets/proposal/img_v3_02151_e3d7b66b-71dd-4cac-8cff-7e1215c7a8ag.png)
-
-![原型界面 5](docs/assets/proposal/exec-b102c9b6-5a92-473f-9b74-ba52a29750c3.png)
-
-![原型界面 6](docs/assets/proposal/img_v3_02151_ad56b8f4-57b0-4be4-879a-05f351288acg.jpg)
-
-![原型界面 7](docs/assets/proposal/img_v3_02151_f80c2f1d-153c-4aac-aa07-2682c9c3650g.png)
-
-![原型界面 8](docs/assets/proposal/img_v3_02151_5790dce7-d61a-4e0a-9aa3-6b24bf6e194g.png)
+<table>
+  <tr>
+    <td width="25%"><img src="docs/assets/proposal/exec-05a0b2f2-7249-4feb-bb84-16c405a0ecb3.png" alt="原型界面 1" /></td>
+    <td width="25%"><img src="docs/assets/proposal/img_v3_02151_2ba13185-8347-41b4-997e-49be33685d2g.png" alt="原型界面 2" /></td>
+    <td width="25%"><img src="docs/assets/proposal/exec-8879a237-e8aa-4792-b169-67dff5a3a244.png" alt="原型界面 3" /></td>
+    <td width="25%"><img src="docs/assets/proposal/img_v3_02151_e3d7b66b-71dd-4cac-8cff-7e1215c7a8ag.png" alt="原型界面 4" /></td>
+  </tr>
+  <tr>
+    <td width="25%"><img src="docs/assets/proposal/exec-b102c9b6-5a92-473f-9b74-ba52a29750c3.png" alt="原型界面 5" /></td>
+    <td width="25%"><img src="docs/assets/proposal/img_v3_02151_ad56b8f4-57b0-4be4-879a-05f351288acg.jpg" alt="原型界面 6" /></td>
+    <td width="25%"><img src="docs/assets/proposal/img_v3_02151_f80c2f1d-153c-4aac-aa07-2682c9c3650g.png" alt="原型界面 7" /></td>
+    <td width="25%"><img src="docs/assets/proposal/img_v3_02151_5790dce7-d61a-4e0a-9aa3-6b24bf6e194g.png" alt="原型界面 8" /></td>
+  </tr>
+</table>
 
 ## 产品功能
 
